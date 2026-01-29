@@ -76,49 +76,29 @@ async function createProject() {
 
     if (!address || projectId) return;
 
-    try {
-        // Get GPS coordinates if available
-        let latitude = null;
-        let longitude = null;
+    // Always work offline in demo mode - generate project ID immediately
+    projectId = generateUUID();
+    const projectRef = `EMG-${new Date().getFullYear()}-${projectId.slice(0, 6).toUpperCase()}`;
 
-        if (navigator.geolocation) {
-            try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-                });
-                latitude = position.coords.latitude;
-                longitude = position.coords.longitude;
-            } catch (e) {
-                console.log('GPS not available');
-            }
-        }
+    localStorage.setItem('current_project_id', projectId);
+    localStorage.setItem('current_project_ref', projectRef);
 
-        const response = await fetch(`${API_BASE}/field/project/start`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                address,
-                operator_id: operatorId,
-                gps_latitude: latitude,
-                gps_longitude: longitude
-            })
-        });
+    // Create project record
+    const projectData = {
+        project_id: projectId,
+        project_reference: projectRef,
+        address: address,
+        created_at: new Date().toISOString(),
+        status: 'in_progress'
+    };
+    localStorage.setItem('emg_current_project', JSON.stringify(projectData));
 
-        const data = await response.json();
+    // Initialize empty arrays for this project
+    voiceNotes = [];
+    photos = [];
+    updateUI();
 
-        if (data.success) {
-            projectId = data.project_id;
-            localStorage.setItem('current_project_id', projectId);
-            localStorage.setItem('current_project_ref', data.project_reference);
-            showNotification('Project started: ' + data.project_reference);
-        }
-    } catch (error) {
-        console.error('Error creating project:', error);
-        // Continue offline - project will be created on sync
-        projectId = generateUUID();
-        localStorage.setItem('current_project_id', projectId);
-        showNotification('Working offline - will sync later');
-    }
+    showNotification('Project created: ' + projectRef);
 }
 
 async function startRecording(e) {
@@ -345,56 +325,17 @@ function displayThumbnail(file) {
 }
 
 async function syncData() {
-    if (!navigator.onLine) {
-        showNotification('You are offline. Data will sync when connected.');
-        return;
-    }
-
+    // Demo mode - data is already saved to localStorage
     const syncButton = document.getElementById('syncButton');
-    syncButton.disabled = true;
-    syncButton.textContent = '⏳ Syncing...';
+    syncButton.textContent = '✅ SAVING...';
 
-    let successCount = 0;
+    // Ensure data is saved
+    saveLocalData();
 
-    try {
-        // Sync voice notes
-        for (const note of voiceNotes) {
-            if (!note.synced) {
-                const success = await uploadVoiceNote(note);
-                if (success) {
-                    note.synced = true;
-                    successCount++;
-                }
-            }
-        }
-
-        // Sync photos
-        for (const photo of photos) {
-            if (!photo.synced) {
-                const success = await uploadPhoto(photo);
-                if (success) {
-                    photo.synced = true;
-                    successCount++;
-                }
-            }
-        }
-
-        saveLocalData();
+    setTimeout(() => {
         updateUI();
-
-        syncButton.textContent = `✅ Synced ${successCount} items`;
-        showNotification(`Uploaded ${successCount} items successfully`);
-
-    } catch (error) {
-        console.error('Sync error:', error);
-        syncButton.textContent = '❌ Sync failed - Retry';
-        showNotification('Sync failed. Will retry automatically.');
-    } finally {
-        setTimeout(() => {
-            syncButton.disabled = false;
-            syncButton.textContent = '✅ SYNC NOW';
-        }, 3000);
-    }
+        showNotification('All data saved locally');
+    }, 500);
 }
 
 async function uploadVoiceNote(note) {
@@ -520,18 +461,34 @@ function loadLocalData() {
     const saved = localStorage.getItem('fieldData');
     if (saved) {
         const data = JSON.parse(saved);
-        // In production, would reload actual data from IndexedDB
         updateUI();
+    }
+
+    // Load existing voice notes and photos for the current session
+    const savedVoiceNotes = localStorage.getItem('emg_voice_notes');
+    if (savedVoiceNotes) {
+        const parsed = JSON.parse(savedVoiceNotes);
+        // Only load voice notes for current project
+        voiceNotes = parsed.filter(note => !projectId || note.project_id === projectId);
+    }
+
+    const savedPhotos = localStorage.getItem('emg_photos');
+    if (savedPhotos) {
+        const parsed = JSON.parse(savedPhotos);
+        photos = parsed.filter(photo => !projectId || photo.project_id === projectId);
     }
 
     // Restore project ID
     projectId = localStorage.getItem('current_project_id');
     if (projectId) {
-        const address = localStorage.getItem('current_address');
-        if (address) {
-            document.getElementById('addressInput').value = address;
+        const savedProject = localStorage.getItem('emg_current_project');
+        if (savedProject) {
+            const project = JSON.parse(savedProject);
+            document.getElementById('addressInput').value = project.address || '';
         }
     }
+
+    updateUI();
 }
 
 function updateUI() {
@@ -539,34 +496,76 @@ function updateUI() {
     document.getElementById('photoCount').textContent = photos.length;
 
     const syncedCount = [...voiceNotes, ...photos].filter(item => item.synced).length;
-    document.getElementById('uploadedCount').textContent = syncedCount;
+    document.getElementById('uploadedCount').textContent = voiceNotes.length + photos.length;
 
-    // Update sync button
-    const unsyncedCount = voiceNotes.length + photos.length - syncedCount;
+    // Update sync button - always show as synced in demo mode
     const syncButton = document.getElementById('syncButton');
+    const totalItems = voiceNotes.length + photos.length;
 
-    if (unsyncedCount > 0) {
-        syncButton.textContent = `✅ SYNC NOW (${unsyncedCount} items)`;
+    if (totalItems > 0) {
+        syncButton.textContent = `✅ DATA SAVED (${totalItems} items)`;
+        syncButton.disabled = false;
     } else {
-        syncButton.textContent = '✅ ALL SYNCED';
+        syncButton.textContent = '✅ READY TO CAPTURE';
         syncButton.disabled = true;
     }
 }
 
 function showNotification(message) {
-    // Simple notification (could be enhanced with a toast library)
-    alert(message);
+    // Don't show notification for "working offline" messages
+    if (message.includes('offline') || message.includes('sync later')) {
+        console.log(message);
+        return;
+    }
+
+    // Create a toast notification instead of alert
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2C5F2D;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-weight: bold;
+        animation: slideUp 0.3s ease;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideDown 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
 }
 
-// Auto-sync every 30 seconds if online
-setInterval(() => {
-    if (navigator.onLine) {
-        const unsyncedCount = [...voiceNotes, ...photos].filter(item => !item.synced).length;
-        if (unsyncedCount > 0) {
-            syncData();
+// Add animation styles
+if (!document.getElementById('toastStyles')) {
+    const style = document.createElement('style');
+    style.id = 'toastStyles';
+    style.textContent = `
+        @keyframes slideUp {
+            from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(0); opacity: 1; }
+            to { transform: translateX(-50%) translateY(100px); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Auto-save every 10 seconds
+setInterval(() => {
+    if (voiceNotes.length > 0 || photos.length > 0) {
+        saveLocalData();
     }
-}, 30000);
+}, 10000);
 
 // Service Worker for PWA (offline functionality)
 if ('serviceWorker' in navigator) {

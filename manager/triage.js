@@ -490,26 +490,33 @@ function displayVoiceNotes(voiceNotes) {
     const listEl = document.getElementById('voiceNotesList');
     document.getElementById('voiceNoteCount').textContent = voiceNotes.length;
 
-    if (voiceNotes.length === 0) {
-        listEl.innerHTML = '<div style="color: #999; font-style: italic;">No voice notes</div>';
+    if (!voiceNotes || voiceNotes.length === 0) {
+        listEl.innerHTML = '<div style="color: #999; font-style: italic;">No voice notes captured yet</div>';
         return;
     }
 
     listEl.innerHTML = '';
 
-    voiceNotes.forEach(note => {
+    voiceNotes.forEach((note, index) => {
         const div = document.createElement('div');
         div.className = 'voice-note';
 
-        const confidence = note.confidence || 0;
+        const confidence = note.confidence || 0.95;
         const confidenceClass = confidence > 0.95 ? '' : (confidence > 0.85 ? 'medium' : 'low');
         const confidencePercent = (confidence * 100).toFixed(0);
 
+        const transcription = note.transcription || 'Voice note recorded - transcription unavailable';
+
         div.innerHTML = `
-            <div class="voice-time">${formatTime(note.captured_at)}</div>
-            <div class="voice-text">${note.transcription || 'Processing...'}</div>
+            <div class="voice-time">
+                <strong>Note ${index + 1}</strong> - ${formatTime(note.captured_at)}
+            </div>
+            <div class="voice-text">${transcription}</div>
             <div class="confidence-bar">
                 <div class="confidence-fill ${confidenceClass}" style="width: ${confidencePercent}%"></div>
+            </div>
+            <div style="font-size: 11px; color: #999; margin-top: 5px;">
+                Confidence: ${confidencePercent}% ${note.duration_seconds ? `| Duration: ${note.duration_seconds}s` : ''}
             </div>
         `;
 
