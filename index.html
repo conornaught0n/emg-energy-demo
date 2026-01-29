@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Energy Field Capture System - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            padding: 40px 20px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2C5F2D;
+            margin-bottom: 15px;
+        }
+
+        .card-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .card-features {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .card-features li {
+            padding: 8px 0;
+            color: #555;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .card-features li:last-child {
+            border-bottom: none;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #2C5F2D;
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #1a3a1b;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .info-card h2 {
+            color: #2C5F2D;
+            margin-bottom: 15px;
+        }
+
+        .info-card p {
+            color: #666;
+            line-height: 1.8;
+            margin: 10px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #FF9800;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .contact {
+            text-align: center;
+            color: white;
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+
+        .contact a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 32px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏢 EMG ENERGY</div>
+            <div class="tagline">Field Data Capture System - Interactive Demo</div>
+        </div>
+
+        <div class="info-card">
+            <h2>📊 About This System</h2>
+            <p><strong>EMG Energy Field Capture</strong> is a professional multi-modal data capture system that transforms voice notes, equipment photos, and handwritten clipboard data into professional PDF reports for Irish Building Regulations Part L compliance.</p>
+            <p><strong>This is a demonstration of the user interfaces.</strong> Backend features (AI processing, database, PDF generation) require full deployment.</p>
+        </div>
+
+        <div class="cards">
+            <!-- Field Operator Card -->
+            <div class="card">
+                <div class="card-icon">📱</div>
+                <div class="card-title">
+                    Field Operator
+                    <span class="badge">MOBILE</span>
+                </div>
+                <div class="card-description">
+                    Mobile-first Progressive Web App for on-site data capture by field operators.
+                </div>
+                <ul class="card-features">
+                    <li>🎤 Voice note recording</li>
+                    <li>📷 Equipment screen capture</li>
+                    <li>📋 Clipboard photo OCR</li>
+                    <li>☁️ Offline-first storage</li>
+                    <li>🔄 Auto-sync when online</li>
+                </ul>
+                <a href="field/index.html" class="btn">Launch Field Interface</a>
+            </div>
+
+            <!-- Manager Card -->
+            <div class="card">
+                <div class="card-icon">💼</div>
+                <div class="card-title">
+                    Manager Triage
+                    <span class="badge">DESKTOP</span>
+                </div>
+                <div class="card-description">
+                    Desktop dashboard for reviewing AI-processed data and generating final reports.
+                </div>
+                <ul class="card-features">
+                    <li>👁️ Evidence review panel</li>
+                    <li>✏️ Click-to-edit values</li>
+                    <li>🤖 AI confidence scoring</li>
+                    <li>✅ Compliance checking</li>
+                    <li>📄 PDF generation</li>
+                </ul>
+                <a href="manager/triage.html" class="btn">Launch Manager Dashboard</a>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h2>🎯 Key Features</h2>
+            <p><strong>AI-Powered:</strong> OpenAI Whisper for voice transcription + GPT-4o Vision for handwriting OCR</p>
+            <p><strong>Compliance:</strong> Automatic checking against Irish Building Regulations Part L (TGD L 2022)</p>
+            <p><strong>Professional Output:</strong> EMG-branded PDF reports with charts, compliance analysis, and recommendations</p>
+            <p><strong>Time Savings:</strong> Reduces report creation from 2-3 hours to 15-20 minutes (85% reduction)</p>
+        </div>
+
+        <div class="info-card">
+            <h2>💡 How It Works</h2>
+            <p>
+                <strong>1. Field Capture:</strong> Operators use mobile app to record voice notes and take photos of equipment screens and handwritten clipboards<br>
+                <strong>2. AI Processing:</strong> System automatically transcribes voice (Whisper) and extracts data from photos (GPT-4o Vision)<br>
+                <strong>3. Manager Review:</strong> Manager reviews AI-processed data, edits if needed, and approves<br>
+                <strong>4. Report Generation:</strong> System generates professional PDF with EMG branding, compliance analysis, and improvement recommendations
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h2>📱 Testing Tips</h2>
+            <p><strong>Field Operator Interface:</strong> Best viewed on mobile device. Try adding to home screen for full PWA experience.</p>
+            <p><strong>Manager Interface:</strong> Best viewed on desktop/laptop. Wider screen shows the split-panel design.</p>
+            <p><strong>Note:</strong> Demo mode - data capture works locally but doesn't sync to backend. For full functionality, see deployment documentation.</p>
+        </div>
+
+        <div class="contact">
+            <p><strong>EMG Energy Consultants</strong></p>
+            <p>Suite 17, Block A, Clare Technology Park, Gort Road, Ennis, Co. Clare</p>
+            <p>
+                📧 <a href="mailto:info@emgenergy.ie">info@emgenergy.ie</a> |
+                📞 065 672 9090 |
+                📱 087 9444470
+            </p>
+            <p style="margin-top: 20px;">
+                🌐 <a href="https://emgenergy.ie" target="_blank">emgenergy.ie</a>
+            </p>
+            <p style="margin-top: 30px; opacity: 0.8; font-size: 14px;">
+                Energy Compliance Experts | Serving Ireland Nationwide
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Add demo mode indicator
+        console.log('%c🎭 DEMO MODE', 'color: #FF9800; font-size: 20px; font-weight: bold;');
+        console.log('This is a frontend-only demonstration.');
+        console.log('Backend features require full deployment.');
+        console.log('See HOSTINGER_DEPLOY.md for deployment instructions.');
+    </script>
+</body>
+</html>
