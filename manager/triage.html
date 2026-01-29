@@ -70,45 +70,30 @@
             height: calc(100vh - 80px);
         }
 
-        .project-list {
-            width: 300px;
-            background: white;
-            border-right: 2px solid #e0e0e0;
-            overflow-y: auto;
+        .project-header-banner {
+            background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%);
+            color: white;
+            padding: 25px 30px;
+            margin-bottom: 0;
         }
 
-        .project-item {
-            padding: 20px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .project-item:hover {
-            background: #f9f9f9;
-        }
-
-        .project-item.active {
-            background: #e8f5e9;
-            border-left: 4px solid #2C5F2D;
-        }
-
-        .project-ref {
+        .project-ref-large {
+            font-size: 24px;
             font-weight: bold;
-            color: #2C5F2D;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
 
-        .project-address {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
+        .project-address-large {
+            font-size: 16px;
+            opacity: 0.95;
+            margin-bottom: 12px;
         }
 
-        .project-meta {
+        .project-meta-large {
             display: flex;
-            gap: 10px;
-            font-size: 12px;
+            gap: 25px;
+            font-size: 14px;
+            opacity: 0.9;
         }
 
         .badge {
@@ -126,7 +111,7 @@
         }
 
         .evidence-panel {
-            width: 40%;
+            width: 35%;
             background: white;
             padding: 30px;
             overflow-y: auto;
@@ -134,10 +119,32 @@
         }
 
         .draft-panel {
-            width: 60%;
+            width: 65%;
             background: #fafafa;
             padding: 30px;
             overflow-y: auto;
+        }
+
+        .no-project-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-project-message h2 {
+            color: #2C5F2D;
+            margin-bottom: 20px;
+        }
+
+        .no-project-message a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: #2C5F2D;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
         }
 
         .panel-title {
@@ -475,16 +482,16 @@
         </div>
     </div>
 
-    <div class="main-container">
-        <!-- Project List -->
-        <div class="project-list" id="projectList">
-            <div style="padding: 20px; text-align: center; color: #999;">
-                Loading projects...
-            </div>
-        </div>
+    <!-- Project Header Banner -->
+    <div class="project-header-banner" id="projectHeaderBanner" style="display: none;">
+        <div class="project-ref-large" id="projectRefBanner"></div>
+        <div class="project-address-large" id="projectAddressBanner"></div>
+        <div class="project-meta-large" id="projectMetaBanner"></div>
+    </div>
 
+    <div class="main-container">
         <!-- Content Area -->
-        <div class="content-area">
+        <div class="content-area" style="width: 100%;">
             <!-- Evidence Panel -->
             <div class="evidence-panel">
                 <div class="panel-title">📂 RAW EVIDENCE</div>

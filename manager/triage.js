@@ -42,19 +42,22 @@ function loadDemoData() {
 
     if (!currentProject) {
         // No real data yet - show instructions
-        const listEl = document.getElementById('projectList');
-        listEl.innerHTML = `
-            <div style="padding: 20px; text-align: center;">
-                <h3 style="color: #2C5F2D; margin-bottom: 15px;">No Projects Yet</h3>
-                <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
-                    To test the system:<br><br>
-                    1. Open the <strong>Field Operator</strong> interface<br>
-                    2. Enter a property address<br>
-                    3. Capture voice notes and photos<br>
-                    4. Return here to review
+        const contentArea = document.querySelector('.content-area');
+        contentArea.innerHTML = `
+            <div class="no-project-message">
+                <h2>📋 No Project Data Available</h2>
+                <p style="font-size: 16px; line-height: 1.8; max-width: 600px; margin: 0 auto 20px;">
+                    To begin testing the EMG Energy assessment system:
                 </p>
-                <a href="../field/index.html" style="display: inline-block; background: #2C5F2D; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                    Go to Field Interface →
+                <ol style="text-align: left; max-width: 500px; margin: 0 auto 30px; line-height: 2;">
+                    <li>Open the <strong>Field Operator</strong> interface</li>
+                    <li>Enter a property address</li>
+                    <li>Record voice notes (speak clearly for live transcription)</li>
+                    <li>Capture equipment/clipboard photos</li>
+                    <li>Return here to review the data</li>
+                </ol>
+                <a href="../field/index.html">
+                    🎤 Go to Field Interface →
                 </a>
             </div>
         `;
@@ -81,40 +84,23 @@ function loadDemoData() {
 }
 
 function displayProjectList(projects) {
-    const listEl = document.getElementById('projectList');
-    listEl.innerHTML = '';
-
     if (projects.length === 0) {
-        listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No pending projects</div>';
         return;
     }
 
-    projects.forEach((project, index) => {
-        const div = document.createElement('div');
-        div.className = 'project-item' + (index === 0 ? ' active' : '');
-        div.innerHTML = `
-            <div class="project-ref">${project.project_reference}</div>
-            <div class="project-address">${project.address}</div>
-            <div class="project-meta">
-                <span>🎤 ${project.voice_notes}</span>
-                <span>📷 ${project.photos}</span>
-                ${project.needs_review > 0 ? `<span class="badge">${project.needs_review} ⚠️</span>` : ''}
-            </div>
-        `;
+    // Display first project in header banner
+    const project = projects[0];
+    document.getElementById('projectHeaderBanner').style.display = 'block';
+    document.getElementById('projectRefBanner').textContent = project.project_reference;
+    document.getElementById('projectAddressBanner').textContent = project.address;
+    document.getElementById('projectMetaBanner').innerHTML = `
+        <span>🎤 ${project.voice_notes} Voice Notes</span>
+        <span>📷 ${project.photos} Photos</span>
+        <span>📅 ${new Date(project.created_at).toLocaleDateString()}</span>
+    `;
 
-        div.addEventListener('click', () => {
-            document.querySelectorAll('.project-item').forEach(el => el.classList.remove('active'));
-            div.classList.add('active');
-            loadProjectDetails(project.project_id);
-        });
-
-        listEl.appendChild(div);
-    });
-
-    // Auto-load first project
-    if (projects.length > 0) {
-        loadProjectDetails(projects[0].project_id);
-    }
+    // Auto-load the project
+    loadProjectDetails(project.project_id);
 }
 
 async function loadProjectDetails(projectId) {
