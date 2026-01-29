@@ -28,6 +28,9 @@ function init() {
     // Load saved data from localStorage
     loadLocalData();
 
+    // Populate project selector
+    populateProjectSelector();
+
     // Check browser compatibility
     checkSpeechRecognitionSupport();
 
@@ -48,10 +51,72 @@ function init() {
     document.getElementById('equipmentInput').addEventListener('change', (e) => handlePhotoCapture(e, 'equipment'));
     document.getElementById('clipboardInput').addEventListener('change', (e) => handlePhotoCapture(e, 'clipboard'));
 
-    document.getElementById('syncButton').addEventListener('click', syncData);
+    updateUI();
+    showProjectStatus();
+}
+
+function populateProjectSelector() {
+    const allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+    const selector = document.getElementById('projectSelector');
+
+    // Clear existing options except first one
+    selector.innerHTML = '<option value="">-- Select Existing Project --</option>';
+
+    // Add all projects
+    allJobs.forEach(job => {
+        const option = document.createElement('option');
+        option.value = job.jobId;
+        option.textContent = `${job.projectReference} - ${job.address}`;
+        selector.appendChild(option);
+    });
+
+    console.log(`📋 Loaded ${allJobs.length} existing projects into selector`);
+}
+
+function loadSelectedProject() {
+    const selector = document.getElementById('projectSelector');
+    const selectedJobId = selector.value;
+
+    if (!selectedJobId) {
+        return;
+    }
+
+    const allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+    const job = allJobs.find(j => j.jobId === selectedJobId);
+
+    if (!job) {
+        showNotification('Project not found');
+        return;
+    }
+
+    // Load this project
+    projectId = job.jobId;
+    localStorage.setItem('current_project_id', projectId);
+    localStorage.setItem('current_project_ref', job.projectReference);
+
+    // Load voice notes and photos for this project
+    voiceNotes = job.voiceNotes || [];
+    photos = job.photos || [];
+
+    // Update address input
+    document.getElementById('addressInput').value = job.address;
+
+    // Save as current project
+    const projectData = {
+        project_id: job.jobId,
+        project_reference: job.projectReference,
+        address: job.address,
+        created_at: job.createdAt,
+        status: job.status
+    };
+    localStorage.setItem('emg_current_project', JSON.stringify(projectData));
 
     updateUI();
     showProjectStatus();
+
+    showNotification(`Loaded: ${job.projectReference}`);
+    console.log(`✅ Loaded project: ${job.projectReference}`);
+    console.log(`Voice notes: ${voiceNotes.length}, Photos: ${photos.length}`);
 }
 
 function startNewProject() {
@@ -113,14 +178,118 @@ function clearAllData() {
 function showProjectStatus() {
     const statusDiv = document.getElementById('projectStatus');
     const refSpan = document.getElementById('currentProjectRef');
+    const addressSpan = document.getElementById('currentProjectAddress');
 
     if (projectId) {
         const ref = localStorage.getItem('current_project_ref') || 'Unknown';
+        const projectData = JSON.parse(localStorage.getItem('emg_current_project') || '{}');
+        const address = projectData.address || document.getElementById('addressInput').value || 'Unknown';
+
         refSpan.textContent = ref;
+        addressSpan.textContent = address;
         statusDiv.style.display = 'block';
     } else {
         statusDiv.style.display = 'none';
     }
+}
+
+function manualSave() {
+    if (!projectId) {
+        showNotification('Please create or select a project first');
+        return;
+    }
+
+    console.log('💾 MANUAL SAVE TRIGGERED');
+    console.log('Project ID:', projectId);
+    console.log('Voice notes:', voiceNotes.length);
+    console.log('Photos:', photos.length);
+
+    // Force save to dashboard
+    const saveButton = document.getElementById('saveButton');
+    saveButton.textContent = '⏳ SAVING...';
+    saveButton.disabled = true;
+
+    // Save everything
+    saveToLocalStorageAndDashboard();
+
+    setTimeout(() => {
+        saveButton.textContent = '✅ SAVED!';
+        setTimeout(() => {
+            saveButton.textContent = '💾 SAVE TO DASHBOARD';
+            saveButton.disabled = false;
+        }, 1500);
+
+        showNotification(`Saved to dashboard: ${voiceNotes.length} notes, ${photos.length} photos`);
+    }, 500);
+}
+
+function saveToLocalStorageAndDashboard() {
+    const address = document.getElementById('addressInput').value.trim();
+    if (!address || !projectId) {
+        console.warn('Cannot save - missing address or project ID');
+        return;
+    }
+
+    const projectRef = localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`;
+
+    // Prepare voice note data
+    const voiceNoteData = voiceNotes.map(note => ({
+        id: note.id,
+        project_id: note.project_id,
+        captured_at: note.captured_at,
+        transcription: note.transcription,
+        confidence: note.confidence || 0.95,
+        duration_seconds: note.duration_seconds || 30
+    }));
+
+    // Prepare photo data
+    const photoData = photos.map(photo => ({
+        id: photo.id,
+        project_id: photo.project_id,
+        photo_type: photo.photo_type,
+        captured_at: photo.captured_at,
+        file_data: photo.file_data,
+        ocr_confidence: photo.ocr_confidence || 0.90
+    }));
+
+    // Save to emg_voice_notes and emg_photos
+    localStorage.setItem('emg_voice_notes', JSON.stringify(voiceNoteData));
+    localStorage.setItem('emg_photos', JSON.stringify(photoData));
+
+    // Load all jobs
+    let allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+
+    // Find or create job
+    let jobIndex = allJobs.findIndex(j => j.jobId === projectId);
+
+    const jobData = {
+        jobId: projectId,
+        projectReference: projectRef,
+        address: address,
+        createdAt: new Date().toISOString(),
+        status: 'in-progress',
+        voiceNotes: voiceNoteData,
+        photos: photoData,
+        managerInputs: {}
+    };
+
+    if (jobIndex >= 0) {
+        // Update existing
+        allJobs[jobIndex] = { ...allJobs[jobIndex], ...jobData };
+        console.log('✅ Updated existing job in dashboard');
+    } else {
+        // Create new
+        allJobs.push(jobData);
+        console.log('✅ Created new job in dashboard');
+    }
+
+    // Save back to localStorage
+    localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+    console.log(`✅ Dashboard now has ${allJobs.length} total jobs`);
+    console.log('Job data:', jobData);
+
+    // Update project selector
+    populateProjectSelector();
 }
 
 function checkSpeechRecognitionSupport() {
@@ -342,10 +511,8 @@ async function saveVoiceNote(audioBlob) {
     voiceNotes.push(voiceNote);
     console.log('✅ Voice note added. Total:', voiceNotes.length);
 
-    saveLocalData();
     updateUI();
-
-    showNotification(`Voice note ${voiceNotes.length} saved!`);
+    showNotification(`Voice note ${voiceNotes.length} captured! Click SAVE when ready.`);
 }
 
 async function handlePhotoCapture(event, photoType) {
@@ -406,19 +573,7 @@ function displayThumbnail(file) {
     reader.readAsDataURL(file);
 }
 
-async function syncData() {
-    // Demo mode - data is already saved to localStorage
-    const syncButton = document.getElementById('syncButton');
-    syncButton.textContent = '✅ SAVING...';
-
-    // Ensure data is saved
-    saveLocalData();
-
-    setTimeout(() => {
-        updateUI();
-        showNotification('All data saved locally');
-    }, 500);
-}
+// Removed auto-sync - using manual save button instead
 
 async function uploadVoiceNote(note) {
     try {
@@ -570,20 +725,24 @@ function loadLocalData() {
 function updateUI() {
     document.getElementById('voiceCount').textContent = voiceNotes.length;
     document.getElementById('photoCount').textContent = photos.length;
-
-    const syncedCount = [...voiceNotes, ...photos].filter(item => item.synced).length;
     document.getElementById('uploadedCount').textContent = voiceNotes.length + photos.length;
 
-    // Update sync button - always show as synced in demo mode
-    const syncButton = document.getElementById('syncButton');
+    // Update save button
+    const saveButton = document.getElementById('saveButton');
     const totalItems = voiceNotes.length + photos.length;
 
-    if (totalItems > 0) {
-        syncButton.textContent = `✅ DATA SAVED (${totalItems} items)`;
-        syncButton.disabled = false;
+    if (totalItems > 0 && projectId) {
+        saveButton.textContent = `💾 SAVE TO DASHBOARD (${totalItems} items)`;
+        saveButton.disabled = false;
+        saveButton.style.background = '#FF9800';
+    } else if (!projectId) {
+        saveButton.textContent = '⚠️ SELECT/CREATE PROJECT FIRST';
+        saveButton.disabled = true;
+        saveButton.style.background = '#999';
     } else {
-        syncButton.textContent = '✅ READY TO CAPTURE';
-        syncButton.disabled = true;
+        saveButton.textContent = '💾 SAVE TO DASHBOARD';
+        saveButton.disabled = true;
+        saveButton.style.background = '#999';
     }
 }
 
@@ -636,12 +795,7 @@ if (!document.getElementById('toastStyles')) {
     document.head.appendChild(style);
 }
 
-// Auto-save every 10 seconds
-setInterval(() => {
-    if (voiceNotes.length > 0 || photos.length > 0) {
-        saveLocalData();
-    }
-}, 10000);
+// No auto-save - user must click Save button manually
 
 // Service Worker for PWA (offline functionality)
 if ('serviceWorker' in navigator) {

@@ -345,24 +345,43 @@
             <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy" style="height: 40px; margin-bottom: 5px;">
             <div class="subtitle">Field Data Capture System</div>
         </div>
-        <a href="../index.html" class="home-button">🏠 Home</a>
+        <div style="display: flex; gap: 10px;">
+            <a href="../manager/triage.html" class="home-button" style="background: #2196F3;">📊 Dashboard</a>
+            <a href="../index.html" class="home-button">🏠 Home</a>
+        </div>
     </div>
 
     <div class="container">
-        <!-- Project Information -->
+        <!-- Project Selector -->
         <div class="project-info">
-            <h2>Project Information</h2>
-            <input type="text" id="addressInput" placeholder="Enter property address" />
+            <h2>Select or Create Project</h2>
+
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px;">My Projects:</label>
+            <select id="projectSelector" onchange="loadSelectedProject()" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; margin-bottom: 15px;">
+                <option value="">-- Select Existing Project --</option>
+            </select>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
+                <div style="flex: 1; height: 2px; background: #e0e0e0;"></div>
+                <span style="color: #666; font-weight: bold;">OR</span>
+                <div style="flex: 1; height: 2px; background: #e0e0e0;"></div>
+            </div>
+
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px;">Create New Project:</label>
+            <input type="text" id="addressInput" placeholder="Enter property address for new project" />
+
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button onclick="startNewProject()" style="flex: 1; padding: 12px; background: #2C5F2D; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                    ➕ New Project
+                    ➕ Create New Project
                 </button>
-                <button onclick="clearAllData()" style="flex: 1; padding: 12px; background: #D32F2F; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                <button onclick="clearAllData()" style="padding: 12px 20px; background: #D32F2F; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                     🗑️ Clear All
                 </button>
             </div>
-            <div id="projectStatus" style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 6px; font-size: 13px; display: none;">
-                <strong>Current Project:</strong> <span id="currentProjectRef"></span>
+
+            <div id="projectStatus" style="margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 8px; font-size: 14px; display: none;">
+                <strong>📍 Current Project:</strong> <span id="currentProjectRef"></span><br>
+                <strong>📝 Address:</strong> <span id="currentProjectAddress"></span>
             </div>
         </div>
 
@@ -439,10 +458,15 @@
         <!-- Thumbnails -->
         <div class="thumbnail-grid" id="thumbnailGrid"></div>
 
-        <!-- Sync Button -->
-        <button class="sync-button" id="syncButton">
-            ✅ SYNC NOW
-        </button>
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 15px; margin-top: 20px;">
+            <button class="sync-button" id="saveButton" onclick="manualSave()" style="flex: 2; background: #FF9800;">
+                💾 SAVE TO DASHBOARD
+            </button>
+            <button class="sync-button" onclick="window.location.href='../manager/triage.html'" style="flex: 1; background: #2196F3;">
+                📊 VIEW DASHBOARD
+            </button>
+        </div>
     </div>
 
     <script src="app.js"></script>
