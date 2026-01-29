@@ -15,6 +15,8 @@ let voiceNotes = [];
 let photos = [];
 let mediaRecorder = null;
 let audioChunks = [];
+let recognition = null;
+let currentTranscription = '';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
@@ -119,7 +121,44 @@ async function startRecording(e) {
 
     const button = document.getElementById('voiceButton');
     button.classList.add('recording');
-    button.querySelector('.button-subtitle').textContent = 'Recording... Release to stop';
+    currentTranscription = '';
+
+    // Start live speech recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-IE'; // Irish English
+
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' ';
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+
+            currentTranscription = (finalTranscript + interimTranscript).trim();
+
+            // Show live transcription
+            button.querySelector('.button-subtitle').innerHTML =
+                `<span style="font-size: 11px; line-height: 1.3;">${currentTranscription || 'Listening...'}</span>`;
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+        };
+
+        recognition.start();
+    } else {
+        button.querySelector('.button-subtitle').textContent = 'Recording... (Speech recognition not available)';
+    }
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -143,6 +182,7 @@ async function startRecording(e) {
         console.error('Error starting recording:', error);
         showNotification('Microphone access denied');
         button.classList.remove('recording');
+        if (recognition) recognition.stop();
     }
 }
 
@@ -151,6 +191,11 @@ function stopRecording(e) {
 
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
+
+        // Stop speech recognition
+        if (recognition) {
+            recognition.stop();
+        }
 
         const button = document.getElementById('voiceButton');
         button.classList.remove('recording');
@@ -165,16 +210,8 @@ function stopRecording(e) {
 }
 
 async function saveVoiceNote(audioBlob) {
-    // Generate simulated transcription for demo
-    const demoTranscriptions = [
-        'Property assessment in progress. Air permeability test setup complete. Building appears well sealed with minimal obvious gaps.',
-        'Blower door test readings recorded. Pressure difference stable at 50 Pascals. Measuring flow rate now.',
-        'Wall U-value measurements being taken. Using thermal camera to identify any cold spots or thermal bridges in the building envelope.',
-        'Windows and doors inspection complete. All seals appear intact. Minor gap identified under rear door, noted for report.',
-        'Roof insulation depth measured at multiple points. Average depth 300mm of mineral wool. Meets current building regulations.'
-    ];
-
-    const randomTranscription = demoTranscriptions[Math.floor(Math.random() * demoTranscriptions.length)];
+    // Use the live transcription if available, otherwise use fallback
+    const transcription = currentTranscription || 'Voice note recorded - transcription unavailable';
 
     const voiceNote = {
         id: generateUUID(),
@@ -182,7 +219,7 @@ async function saveVoiceNote(audioBlob) {
         operator_id: operatorId,
         captured_at: new Date().toISOString(),
         audio_blob: audioBlob,
-        transcription: randomTranscription,
+        transcription: transcription,
         synced: false
     };
 
@@ -190,7 +227,7 @@ async function saveVoiceNote(audioBlob) {
     saveLocalData();
     updateUI();
 
-    showNotification('Voice note saved');
+    showNotification('Voice note saved with live transcription');
 }
 
 async function handlePhotoCapture(event, photoType) {

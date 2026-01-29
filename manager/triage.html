@@ -466,8 +466,8 @@
 <body>
     <div class="header">
         <div>
-            <div class="logo">EMG ENERGY - MANAGER TRIAGE</div>
-            <div class="subtitle">Report Review Dashboard</div>
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy" style="height: 35px; margin-bottom: 5px;">
+            <div class="subtitle">Manager Triage Dashboard</div>
         </div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <div class="pending-count" id="pendingCount">0 Pending</div>
@@ -540,6 +540,69 @@
 
                     <h3 style="margin-bottom: 15px;">Test Results</h3>
                     <div id="testResultsTable"></div>
+
+                    <div style="background: #f5f5f5; padding: 20px; border-radius: 12px; margin-top: 30px;">
+                        <h3 style="margin-bottom: 15px; color: #2C5F2D;">📝 Manager's Additional Information</h3>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Assessor Notes:</label>
+                            <textarea id="managerNotes" rows="4" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: inherit; resize: vertical;"
+                                placeholder="Add additional observations, notes, or context for the report..."></textarea>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px;">Custom Recommendations:</label>
+                            <textarea id="customRecommendations" rows="3" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: inherit; resize: vertical;"
+                                placeholder="Add specific recommendations for this property..."></textarea>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Floor Area (m²):</label>
+                                <input type="number" id="floorArea" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" placeholder="150" />
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Year Built:</label>
+                                <input type="number" id="yearBuilt" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;" placeholder="2020" />
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Current BER Rating:</label>
+                                <select id="berRating" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                    <option value="">Select...</option>
+                                    <option value="A1">A1</option>
+                                    <option value="A2">A2</option>
+                                    <option value="A3">A3</option>
+                                    <option value="B1">B1</option>
+                                    <option value="B2">B2</option>
+                                    <option value="B3">B3</option>
+                                    <option value="C1">C1</option>
+                                    <option value="C2">C2</option>
+                                    <option value="C3">C3</option>
+                                    <option value="D1">D1</option>
+                                    <option value="D2">D2</option>
+                                    <option value="E1">E1</option>
+                                    <option value="E2">E2</option>
+                                    <option value="F">F</option>
+                                    <option value="G">G</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Property Type:</label>
+                                <select id="propertyType" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                    <option value="">Select...</option>
+                                    <option value="Detached House">Detached House</option>
+                                    <option value="Semi-Detached">Semi-Detached</option>
+                                    <option value="Terraced">Terraced</option>
+                                    <option value="Apartment">Apartment</option>
+                                    <option value="Bungalow">Bungalow</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="saveManagerInputs()" style="margin-top: 15px; padding: 12px 24px; background: #2C5F2D; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            💾 Save Additional Info
+                        </button>
+                    </div>
 
                     <div class="recommendations-section">
                         <h3 style="margin-bottom: 15px; color: #2C5F2D;">💰 IMPROVEMENT RECOMMENDATIONS</h3>

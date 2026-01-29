@@ -233,6 +233,9 @@ function displayProjectData(data) {
 
     // Update report header
     document.getElementById('reportAddress').textContent = data.project.address;
+
+    // Load any saved manager inputs
+    loadManagerInputs();
 }
 
 function displayVoiceNotes(voiceNotes) {
@@ -514,133 +517,219 @@ async function checkBackendAvailability() {
 }
 
 function printReport() {
-    // Create a print-friendly version of the report
-    const reportContent = document.getElementById('draftReport').cloneNode(true);
+    generateComprehensivePDFReport();
+}
 
-    // Remove action buttons from print view
-    const actionButtons = reportContent.querySelector('.action-buttons');
-    if (actionButtons) {
-        actionButtons.remove();
+function generateComprehensivePDFReport() {
+    if (!currentProject) {
+        showNotification('No project data available');
+        return;
     }
 
+    // Get manager inputs
+    const managerInputs = JSON.parse(localStorage.getItem('emg_manager_inputs') || '{}');
+    const project = currentProject.project;
+    const testResults = currentTestResults;
+    const voiceNotes = currentProject.voice_notes || [];
+
+    // Generate comprehensive content
+    const reportHTML = generateDetailedReportHTML(project, testResults, voiceNotes, managerInputs);
+
     // Create print window
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    printWindow.document.write(reportHTML);
+    printWindow.document.close();
+
+    // Wait for images to load then print
+    setTimeout(() => {
+        printWindow.print();
+    }, 1000);
+
+    showNotification('Opening comprehensive report...');
+}
+
+function generateDetailedReportHTML(project, testResults, voiceNotes, managerInputs) {
+    const today = new Date().toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const passCount = testResults.filter(t => t.status === 'PASS').length;
+    const failCount = testResults.filter(t => t.status === 'FAIL').length;
+    const overallStatus = failCount === 0 ? 'COMPLIANT' : 'NON-COMPLIANT';
+
+    // Generate executive summary
+    const executiveSummary = generateExecutiveSummary(project, testResults, passCount, failCount, managerInputs);
+
+    // Generate detailed findings
+    const detailedFindings = generateDetailedFindings(testResults, voiceNotes);
+
+    // Generate recommendations
+    const recommendations = generateDetailedRecommendations(testResults, failCount, managerInputs);
+
+    // Generate compliance analysis
+    const complianceAnalysis = generateComplianceAnalysis(testResults, passCount, failCount);
+
+    return `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>EMG Energy Assessment Report</title>
+            <meta charset="UTF-8">
+            <title>EMG Energy Assessment Report - ${project.reference}</title>
             <style>
+                @page { margin: 2cm; }
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    padding: 20px;
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
                     max-width: 210mm;
                     margin: 0 auto;
+                    background: white;
+                }
+                .logo {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .logo img {
+                    max-width: 250px;
+                    height: auto;
                 }
                 .report-header {
                     text-align: center;
-                    margin-bottom: 30px;
+                    border-bottom: 4px solid #2C5F2D;
                     padding-bottom: 20px;
-                    border-bottom: 3px solid #2C5F2D;
+                    margin-bottom: 30px;
                 }
                 .report-title {
-                    font-size: 28px;
+                    font-size: 32px;
                     font-weight: bold;
                     color: #2C5F2D;
                     margin-bottom: 10px;
                 }
-                .compliance-summary {
-                    background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%);
-                    color: white;
-                    padding: 25px;
-                    border-radius: 12px;
-                    margin-bottom: 30px;
+                .report-subtitle {
+                    font-size: 18px;
+                    color: #666;
+                    margin-bottom: 20px;
                 }
-                .summary-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 15px;
-                    margin-top: 15px;
-                }
-                .summary-item {
-                    text-align: center;
-                }
-                .summary-number {
-                    font-size: 32px;
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                }
-                .summary-label {
-                    font-size: 12px;
-                    opacity: 0.9;
-                }
-                .test-result-row {
-                    display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr;
-                    gap: 15px;
-                    padding: 15px;
-                    border-bottom: 1px solid #e0e0e0;
-                    align-items: center;
-                }
-                .test-result-row.header {
-                    background: #2C5F2D;
-                    color: white;
-                    font-weight: bold;
-                    border-radius: 8px 8px 0 0;
-                }
-                .status-badge {
-                    padding: 6px 12px;
-                    border-radius: 16px;
-                    font-weight: bold;
-                    font-size: 12px;
-                    text-align: center;
-                    display: inline-block;
-                }
-                .status-pass {
-                    background: #4CAF50;
-                    color: white;
-                }
-                .status-marginal {
-                    background: #FF9800;
-                    color: white;
-                }
-                .status-fail {
-                    background: #D32F2F;
-                    color: white;
-                }
-                .recommendations-section {
-                    background: #e8f5e9;
-                    padding: 25px;
-                    border-radius: 12px;
-                    margin-top: 30px;
-                    page-break-inside: avoid;
-                }
-                .recommendation-item {
-                    background: white;
+                .project-details {
+                    background: #f8f9fa;
                     padding: 20px;
                     border-radius: 8px;
-                    margin-bottom: 15px;
-                    border-left: 4px solid #FF9800;
+                    margin-bottom: 30px;
+                }
+                .project-details table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .project-details td {
+                    padding: 8px 12px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .project-details td:first-child {
+                    font-weight: bold;
+                    width: 40%;
+                    color: #2C5F2D;
+                }
+                .section {
+                    margin-bottom: 40px;
                     page-break-inside: avoid;
                 }
-                .recommendation-item.high-priority {
-                    border-left-color: #D32F2F;
-                }
-                .recommendation-cost {
+                .section-title {
                     font-size: 24px;
                     font-weight: bold;
                     color: #2C5F2D;
-                    margin-top: 10px;
+                    border-left: 6px solid #2C5F2D;
+                    padding-left: 15px;
+                    margin-bottom: 20px;
+                }
+                .subsection-title {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #1a3a1b;
+                    margin-top: 20px;
+                    margin-bottom: 10px;
+                }
+                .paragraph {
+                    text-align: justify;
+                    margin-bottom: 15px;
+                    line-height: 1.8;
+                }
+                .compliance-badge {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    border-radius: 25px;
+                    font-weight: bold;
+                    font-size: 18px;
+                    margin: 10px 0;
+                }
+                .compliant {
+                    background: #4CAF50;
+                    color: white;
+                }
+                .non-compliant {
+                    background: #D32F2F;
+                    color: white;
+                }
+                .test-results-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }
+                .test-results-table th {
+                    background: #2C5F2D;
+                    color: white;
+                    padding: 12px;
+                    text-align: left;
+                    font-weight: bold;
+                }
+                .test-results-table td {
+                    padding: 12px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                .test-results-table tr:hover {
+                    background: #f5f5f5;
+                }
+                .status-pass {
+                    color: #4CAF50;
+                    font-weight: bold;
+                }
+                .status-fail {
+                    color: #D32F2F;
+                    font-weight: bold;
+                }
+                .recommendation-box {
+                    background: #fff3cd;
+                    border-left: 5px solid #FF9800;
+                    padding: 20px;
+                    margin: 15px 0;
+                    border-radius: 5px;
+                }
+                .recommendation-box.high {
+                    background: #f8d7da;
+                    border-left-color: #D32F2F;
+                }
+                .key-findings {
+                    background: #e8f5e9;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                }
+                .key-findings ul {
+                    margin: 10px 0;
+                    padding-left: 25px;
+                }
+                .key-findings li {
+                    margin: 8px 0;
+                }
+                .footer {
+                    margin-top: 50px;
+                    padding-top: 20px;
+                    border-top: 3px solid #2C5F2D;
+                    text-align: center;
+                    color: #666;
+                    font-size: 12px;
                 }
                 @media print {
-                    body {
-                        padding: 0;
-                    }
-                    .compliance-summary {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    .status-badge {
+                    body { background: white; }
+                    .section { page-break-inside: avoid; }
+                    .compliance-badge, .test-results-table th, .recommendation-box {
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
@@ -648,25 +737,282 @@ function printReport() {
             </style>
         </head>
         <body>
-            ${reportContent.innerHTML}
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e0e0e0; text-align: center; color: #666; font-size: 12px;">
+            <div class="logo">
+                <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy Consultants">
+            </div>
+
+            <div class="report-header">
+                <div class="report-title">BUILDING ENERGY ASSESSMENT REPORT</div>
+                <div class="report-subtitle">Part L Building Regulations Compliance Assessment</div>
+                <div style="margin-top: 15px;">
+                    <strong>Report Reference:</strong> ${project.reference}<br>
+                    <strong>Date of Assessment:</strong> ${today}
+                </div>
+            </div>
+
+            <div class="project-details">
+                <h3 style="color: #2C5F2D; margin-bottom: 15px;">Property Details</h3>
+                <table>
+                    <tr>
+                        <td>Property Address:</td>
+                        <td>${project.address}</td>
+                    </tr>
+                    <tr>
+                        <td>Property Type:</td>
+                        <td>${managerInputs.propertyType || 'Residential Dwelling'}</td>
+                    </tr>
+                    <tr>
+                        <td>Floor Area:</td>
+                        <td>${managerInputs.floorArea || project.floor_area_m2 || 'N/A'} m²</td>
+                    </tr>
+                    <tr>
+                        <td>Year Built:</td>
+                        <td>${managerInputs.yearBuilt || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td>Current BER Rating:</td>
+                        <td>${managerInputs.berRating || 'To be determined'}</td>
+                    </tr>
+                    <tr>
+                        <td>Assessor:</td>
+                        <td>EMG Energy Consultants</td>
+                    </tr>
+                    <tr>
+                        <td>Overall Compliance Status:</td>
+                        <td><span class="compliance-badge ${overallStatus.toLowerCase().replace('-', '')}">${overallStatus}</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">1. EXECUTIVE SUMMARY</div>
+                ${executiveSummary}
+            </div>
+
+            <div class="section">
+                <div class="section-title">2. ASSESSMENT METHODOLOGY</div>
+                <div class="paragraph">
+                    This comprehensive building energy assessment was conducted in accordance with the Technical Guidance Document Part L (Conservation of Fuel and Energy) - Building Regulations 2022. The assessment involved a detailed on-site inspection, including air permeability testing, thermal performance measurements, and building fabric analysis.
+                </div>
+                <div class="paragraph">
+                    Our qualified assessors utilized calibrated testing equipment including blower door apparatus for air leakage testing, thermal imaging cameras for identifying heat loss areas, and precision instruments for measuring U-values of building elements. All testing procedures followed IS EN ISO 9972:2015 standards for air permeability testing and IS EN ISO 6946:2017 for thermal transmittance calculations.
+                </div>
+                ${voiceNotes.length > 0 ? `
+                <div class="subsection-title">Field Observations</div>
+                <div class="key-findings">
+                    <ul>
+                        ${voiceNotes.map(note => `<li>${note.transcription}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="section">
+                <div class="section-title">3. DETAILED FINDINGS & COMPLIANCE ANALYSIS</div>
+                ${detailedFindings}
+                ${complianceAnalysis}
+
+                <div class="subsection-title">Test Results Summary</div>
+                <table class="test-results-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Location</th>
+                            <th>Measured Value</th>
+                            <th>Compliance Status</th>
+                            <th>Standard</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${testResults.map(test => `
+                            <tr>
+                                <td><strong>${test.parameter}</strong></td>
+                                <td>${test.location_id}</td>
+                                <td>${test.value} ${test.unit}</td>
+                                <td class="status-${test.status.toLowerCase()}">${test.status}</td>
+                                <td style="font-size: 11px;">${test.regulation_reference}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">4. RECOMMENDATIONS</div>
+                ${recommendations}
+                ${managerInputs.customRecommendations ? `
+                <div class="subsection-title">Additional Recommendations</div>
+                <div class="paragraph">${managerInputs.customRecommendations}</div>
+                ` : ''}
+            </div>
+
+            ${managerInputs.notes ? `
+            <div class="section">
+                <div class="section-title">5. ASSESSOR'S NOTES</div>
+                <div class="paragraph">${managerInputs.notes}</div>
+            </div>
+            ` : ''}
+
+            <div class="section">
+                <div class="section-title">6. CONCLUSION</div>
+                <div class="paragraph">
+                    This assessment has evaluated the property at ${project.address} against the requirements set out in Technical Guidance Document Part L of the Irish Building Regulations. ${overallStatus === 'COMPLIANT' ?
+                    'The property demonstrates full compliance with current energy efficiency standards, with all measured parameters meeting or exceeding the required performance criteria.' :
+                    'The assessment has identified areas where the property does not fully meet current compliance standards. The recommendations outlined in this report provide a clear pathway to achieving full compliance and improving the overall energy performance of the building.'}
+                </div>
+                <div class="paragraph">
+                    EMG Energy Consultants remains available to provide further guidance on implementing the recommended improvements and can assist with project management of any remedial works. We recommend that any improvement works be carried out by qualified contractors and that post-works verification testing be conducted to confirm compliance achievement.
+                </div>
+            </div>
+
+            <div class="footer">
                 <p><strong>EMG Energy Consultants</strong></p>
                 <p>Suite 17, Block A, Clare Technology Park, Gort Road, Ennis, Co. Clare</p>
-                <p>📧 info@emgenergy.ie | 📞 065 672 9090 | 🌐 emgenergy.ie</p>
-                <p style="margin-top: 15px;">Energy Compliance Experts | Serving Ireland Nationwide</p>
+                <p>Email: info@emgenergy.ie | Phone: 065 672 9090 | Mobile: 087 9444470</p>
+                <p>Web: www.emgenergy.ie</p>
+                <p style="margin-top: 15px; font-style: italic;">Energy Compliance Experts | Serving Ireland Nationwide</p>
+                <p style="margin-top: 10px;">Report generated: ${today} | Reference: ${project.reference}</p>
             </div>
         </body>
         </html>
-    `);
+    `;
+}
 
-    printWindow.document.close();
+function generateExecutiveSummary(project, testResults, passCount, failCount, managerInputs) {
+    const totalTests = testResults.length;
+    const complianceRate = totalTests > 0 ? Math.round((passCount / totalTests) * 100) : 0;
 
-    // Wait for content to load then print
-    setTimeout(() => {
-        printWindow.print();
-    }, 500);
+    return `
+        <div class="paragraph">
+            This report presents the findings of a comprehensive building energy assessment conducted at ${project.address}. The assessment evaluated ${totalTests} critical parameters related to thermal performance and air tightness, comparing measured values against the standards specified in Technical Guidance Document Part L (2022).
+        </div>
+        <div class="key-findings">
+            <h4 style="margin-bottom: 10px;">Key Findings:</h4>
+            <ul>
+                <li><strong>Compliance Rate:</strong> ${complianceRate}% of tested parameters meet Part L requirements</li>
+                <li><strong>Parameters Assessed:</strong> ${totalTests} (${passCount} compliant, ${failCount} non-compliant)</li>
+                ${failCount === 0 ? '<li><strong>Overall Status:</strong> Property demonstrates full compliance with current building regulations</li>' :
+                `<li><strong>Overall Status:</strong> ${failCount} parameter${failCount > 1 ? 's' : ''} require${failCount > 1 ? '' : 's'} attention to achieve full compliance</li>`}
+                ${managerInputs.berRating ? `<li><strong>Current BER Rating:</strong> ${managerInputs.berRating}</li>` : ''}
+            </ul>
+        </div>
+    `;
+}
 
-    showNotification('Opening print dialog...');
+function generateDetailedFindings(testResults, voiceNotes) {
+    let findings = '<div class="paragraph">The on-site assessment included comprehensive testing of the building envelope\'s thermal performance and air tightness characteristics. Each element was evaluated against the performance standards mandated by Part L of the Building Regulations.</div>';
+
+    // Group results by type
+    const airTests = testResults.filter(t => t.test_type.includes('Air') || t.test_type.includes('Permeability'));
+    const uValueTests = testResults.filter(t => t.test_type.includes('U-Value') || t.test_type.includes('Thermal'));
+
+    if (airTests.length > 0) {
+        const airTest = airTests[0];
+        findings += `
+            <div class="subsection-title">Air Permeability Assessment</div>
+            <div class="paragraph">
+                Air permeability testing was conducted using blower door methodology in accordance with IS EN ISO 9972:2015. The test measured the air leakage rate through the building envelope at a pressure differential of 50 Pascals. The recorded value of ${airTest.value} ${airTest.unit} ${airTest.status === 'PASS' ? 'meets' : 'exceeds'} the maximum permissible limit of 5.0 m³/h/m² as specified in TGD Part L.
+                ${airTest.status === 'PASS' ?
+                'This result demonstrates effective air sealing and indicates good construction quality with minimal uncontrolled air leakage paths.' :
+                'This elevated reading suggests the presence of significant air leakage paths that should be identified and sealed to improve energy efficiency and occupant comfort.'}
+            </div>
+        `;
+    }
+
+    if (uValueTests.length > 0) {
+        findings += `
+            <div class="subsection-title">Thermal Performance Assessment</div>
+            <div class="paragraph">
+                Thermal transmittance (U-value) measurements were conducted on key building elements to evaluate their insulation performance. U-values represent the rate of heat transfer through a building element, with lower values indicating better insulation performance.
+            </div>
+        `;
+
+        uValueTests.forEach(test => {
+            findings += `
+                <div class="paragraph">
+                    <strong>${test.location_id}:</strong> The measured U-value of ${test.value} ${test.unit} ${test.status === 'PASS' ? 'complies with' : 'exceeds'} the maximum standard of ${test.regulation_reference.split('Max ')[1]}. ${test.status === 'PASS' ?
+                    'This indicates adequate insulation levels that will contribute to good thermal comfort and energy efficiency.' :
+                    'Improvement of the insulation in this element would reduce heat loss and improve overall building performance.'}
+                </div>
+            `;
+        });
+    }
+
+    return findings;
+}
+
+function generateComplianceAnalysis(testResults, passCount, failCount) {
+    return `
+        <div class="subsection-title">Compliance Status Overview</div>
+        <div class="paragraph">
+            Of the ${testResults.length} parameters assessed, ${passCount} meet the requirements of Technical Guidance Document Part L (2022), representing a compliance rate of ${Math.round((passCount/testResults.length)*100)}%. ${failCount === 0 ?
+            'The property achieves full compliance across all tested parameters, demonstrating adherence to current energy efficiency standards.' :
+            `There are ${failCount} parameter${failCount > 1 ? 's' : ''} that require attention to achieve full regulatory compliance. The recommendations section provides detailed guidance on addressing these areas.`}
+        </div>
+    `;
+}
+
+function generateDetailedRecommendations(testResults, failCount, managerInputs) {
+    let recommendations = '';
+
+    if (failCount === 0) {
+        recommendations = `
+            <div class="paragraph">
+                All assessed parameters currently meet or exceed Part L requirements. The property demonstrates good energy performance characteristics. To maintain and potentially enhance this performance, we recommend:
+            </div>
+            <div class="recommendation-box">
+                <strong>Maintenance Recommendations:</strong>
+                <ul style="margin: 10px 0; padding-left: 25px;">
+                    <li>Maintain regular inspection and maintenance of air sealing elements, particularly around windows, doors, and service penetrations</li>
+                    <li>Monitor insulation condition, particularly in roof spaces, ensuring no degradation or compression occurs over time</li>
+                    <li>Consider periodic re-testing (every 5-10 years) to verify continued compliance as building elements age</li>
+                    <li>When undertaking future renovations, ensure any new work maintains or improves upon current performance levels</li>
+                </ul>
+            </div>
+        `;
+    } else {
+        const failedTests = testResults.filter(t => t.status === 'FAIL');
+
+        recommendations = `
+            <div class="paragraph">
+                To achieve full compliance with Part L requirements, the following remedial works are recommended. Each recommendation has been prioritized based on its impact on overall building performance and regulatory compliance.
+            </div>
+        `;
+
+        failedTests.forEach((test, index) => {
+            recommendations += `
+                <div class="recommendation-box high">
+                    <strong>Priority Recommendation ${index + 1}: ${test.parameter}</strong>
+                    <div style="margin-top: 10px;">
+                        <strong>Current Status:</strong> ${test.value} ${test.unit} (Exceeds limit of ${test.regulation_reference.split('Max ')[1]})<br>
+                        <strong>Location:</strong> ${test.location_id}
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <strong>Recommended Action:</strong><br>
+                        ${generateSpecificRecommendation(test)}
+                    </div>
+                    <div style="margin-top: 15px; color: #666; font-size: 13px;">
+                        <strong>Expected Outcome:</strong> Implementation of this recommendation will bring the ${test.parameter.toLowerCase()} into compliance with Part L standards, reducing heat loss and improving energy efficiency.
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    return recommendations;
+}
+
+function generateSpecificRecommendation(test) {
+    if (test.test_type.includes('Air') || test.test_type.includes('Permeability')) {
+        return `Conduct a detailed air leakage survey using thermal imaging to identify specific leakage paths. Common areas requiring attention include window and door seals, service penetrations, joist-to-wall junctions, and attic hatches. Apply appropriate sealing measures using expanding foam, weatherstripping, or acoustic sealant as appropriate. Following remedial works, conduct verification testing to confirm improved performance.`;
+    } else if (test.location_id.includes('Wall')) {
+        return `Enhance wall insulation through internal dry-lining with insulated plasterboard (minimum 50mm PIR insulation + 12.5mm plasterboard) or external insulation system (minimum 100mm EPS with rendered finish). Internal insulation is generally more cost-effective but reduces room dimensions slightly. External insulation provides better thermal performance and eliminates thermal bridging but requires planning permission consideration.`;
+    } else if (test.location_id.includes('Roof')) {
+        return `Upgrade roof insulation to minimum 300mm of mineral wool insulation (achieving U-value of 0.16 W/m²K or better). If roof space is used for storage, install insulation between and over ceiling joists. Ensure proper ventilation is maintained to prevent condensation issues. Consider spray foam insulation for complex roof geometries or where space is limited.`;
+    } else if (test.location_id.includes('Window')) {
+        return `Replace existing windows with high-performance double or triple glazed units featuring low-emissivity coatings and thermally-broken frames. Minimum specification should be U-value 1.4 W/m²K or better. Ensure proper installation with continuous air and vapor barriers. Consider A-rated windows for optimal performance.`;
+    }
+    return `Consult with EMG Energy Consultants for detailed specification and implementation guidance specific to this element.`;
 }
 
 function showPhotoModal(photo) {
@@ -719,6 +1065,33 @@ function showPhotoModal(photo) {
 function formatTime(isoString) {
     const date = new Date(isoString);
     return date.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' });
+}
+
+function saveManagerInputs() {
+    const managerData = {
+        notes: document.getElementById('managerNotes').value,
+        customRecommendations: document.getElementById('customRecommendations').value,
+        floorArea: document.getElementById('floorArea').value,
+        yearBuilt: document.getElementById('yearBuilt').value,
+        berRating: document.getElementById('berRating').value,
+        propertyType: document.getElementById('propertyType').value
+    };
+
+    localStorage.setItem('emg_manager_inputs', JSON.stringify(managerData));
+    showNotification('Additional information saved');
+}
+
+function loadManagerInputs() {
+    const saved = localStorage.getItem('emg_manager_inputs');
+    if (saved) {
+        const data = JSON.parse(saved);
+        document.getElementById('managerNotes').value = data.notes || '';
+        document.getElementById('customRecommendations').value = data.customRecommendations || '';
+        document.getElementById('floorArea').value = data.floorArea || '';
+        document.getElementById('yearBuilt').value = data.yearBuilt || '';
+        document.getElementById('berRating').value = data.berRating || '';
+        document.getElementById('propertyType').value = data.propertyType || '';
+    }
 }
 
 function showNotification(message) {
