@@ -165,12 +165,24 @@ function stopRecording(e) {
 }
 
 async function saveVoiceNote(audioBlob) {
+    // Generate simulated transcription for demo
+    const demoTranscriptions = [
+        'Property assessment in progress. Air permeability test setup complete. Building appears well sealed with minimal obvious gaps.',
+        'Blower door test readings recorded. Pressure difference stable at 50 Pascals. Measuring flow rate now.',
+        'Wall U-value measurements being taken. Using thermal camera to identify any cold spots or thermal bridges in the building envelope.',
+        'Windows and doors inspection complete. All seals appear intact. Minor gap identified under rear door, noted for report.',
+        'Roof insulation depth measured at multiple points. Average depth 300mm of mineral wool. Meets current building regulations.'
+    ];
+
+    const randomTranscription = demoTranscriptions[Math.floor(Math.random() * demoTranscriptions.length)];
+
     const voiceNote = {
         id: generateUUID(),
         project_id: projectId,
         operator_id: operatorId,
         captured_at: new Date().toISOString(),
         audio_blob: audioBlob,
+        transcription: randomTranscription,
         synced: false
     };
 
@@ -190,22 +202,30 @@ async function handlePhotoCapture(event, photoType) {
         return;
     }
 
-    const photo = {
-        id: generateUUID(),
-        project_id: projectId,
-        operator_id: operatorId,
-        photo_type: photoType,
-        captured_at: new Date().toISOString(),
-        file: file,
-        synced: false
+    // Convert file to base64 for storage
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const photo = {
+            id: generateUUID(),
+            project_id: projectId,
+            operator_id: operatorId,
+            photo_type: photoType,
+            captured_at: new Date().toISOString(),
+            file: file,
+            file_data: e.target.result, // base64 data
+            synced: false
+        };
+
+        photos.push(photo);
+        saveLocalData();
+        updateUI();
+
+        // Show thumbnail
+        displayThumbnail(file);
+
+        showNotification('Photo captured');
     };
-
-    photos.push(photo);
-    saveLocalData();
-    updateUI();
-
-    // Show thumbnail
-    displayThumbnail(file);
+    reader.readAsDataURL(file);
 
     // Show success feedback
     const button = event.target.id === 'equipmentInput'
@@ -214,8 +234,6 @@ async function handlePhotoCapture(event, photoType) {
 
     button.classList.add('success');
     setTimeout(() => button.classList.remove('success'), 2000);
-
-    showNotification('Photo captured');
 
     // Reset file input
     event.target.value = '';
@@ -330,13 +348,48 @@ async function uploadPhoto(photo) {
 }
 
 function saveLocalData() {
-    // Note: Can't store Blobs in localStorage, would need IndexedDB for production
+    // Save counts and metadata
     const data = {
         voiceCount: voiceNotes.length,
         photoCount: photos.length,
         syncedCount: [...voiceNotes, ...photos].filter(item => item.synced).length
     };
     localStorage.setItem('fieldData', JSON.stringify(data));
+
+    // Save actual voice note transcriptions (simulate transcription for demo)
+    const voiceNoteData = voiceNotes.map(note => ({
+        id: note.id,
+        project_id: note.project_id,
+        captured_at: note.captured_at,
+        transcription: note.transcription || 'Voice note recording captured - waiting for processing',
+        confidence: 0.95,
+        duration_seconds: Math.floor(Math.random() * 30) + 20
+    }));
+    localStorage.setItem('emg_voice_notes', JSON.stringify(voiceNoteData));
+
+    // Save photo metadata
+    const photoData = photos.map(photo => ({
+        id: photo.id,
+        project_id: photo.project_id,
+        photo_type: photo.photo_type,
+        captured_at: photo.captured_at,
+        file_data: photo.file_data,
+        ocr_confidence: 0.88 + Math.random() * 0.1
+    }));
+    localStorage.setItem('emg_photos', JSON.stringify(photoData));
+
+    // Save project info
+    const address = document.getElementById('addressInput').value;
+    if (address && projectId) {
+        const projectData = {
+            project_id: projectId,
+            project_reference: localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`,
+            address: address,
+            created_at: new Date().toISOString(),
+            status: 'in_progress'
+        };
+        localStorage.setItem('emg_current_project', JSON.stringify(projectData));
+    }
 }
 
 function loadLocalData() {
