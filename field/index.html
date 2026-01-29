@@ -353,6 +353,17 @@
         <div class="project-info">
             <h2>Project Information</h2>
             <input type="text" id="addressInput" placeholder="Enter property address" />
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button onclick="startNewProject()" style="flex: 1; padding: 12px; background: #2C5F2D; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    ➕ New Project
+                </button>
+                <button onclick="clearAllData()" style="flex: 1; padding: 12px; background: #D32F2F; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                    🗑️ Clear All
+                </button>
+            </div>
+            <div id="projectStatus" style="margin-top: 10px; padding: 10px; background: #e8f5e9; border-radius: 6px; font-size: 13px; display: none;">
+                <strong>Current Project:</strong> <span id="currentProjectRef"></span>
+            </div>
         </div>
 
         <!-- Browser Warning -->

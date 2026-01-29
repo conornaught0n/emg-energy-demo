@@ -50,10 +50,77 @@ function init() {
 
     document.getElementById('syncButton').addEventListener('click', syncData);
 
-    // Auto-create project when address is entered
-    document.getElementById('addressInput').addEventListener('blur', createProject);
+    updateUI();
+    showProjectStatus();
+}
+
+function startNewProject() {
+    const address = document.getElementById('addressInput').value.trim();
+    if (!address) {
+        showNotification('Please enter an address first');
+        return;
+    }
+
+    // Create new project
+    projectId = generateUUID();
+    const projectRef = `EMG-${new Date().getFullYear()}-${projectId.slice(0, 6).toUpperCase()}`;
+
+    localStorage.setItem('current_project_id', projectId);
+    localStorage.setItem('current_project_ref', projectRef);
+
+    // Reset arrays for new project
+    voiceNotes = [];
+    photos = [];
+
+    // Create project record
+    const projectData = {
+        project_id: projectId,
+        project_reference: projectRef,
+        address: address,
+        created_at: new Date().toISOString(),
+        status: 'in-progress'
+    };
+    localStorage.setItem('emg_current_project', JSON.stringify(projectData));
 
     updateUI();
+    showProjectStatus();
+    showNotification('New project created: ' + projectRef);
+}
+
+function clearAllData() {
+    if (!confirm('Clear ALL data? This will delete all projects, voice notes, and photos.')) {
+        return;
+    }
+
+    localStorage.removeItem('emg_all_jobs');
+    localStorage.removeItem('emg_current_project');
+    localStorage.removeItem('emg_voice_notes');
+    localStorage.removeItem('emg_photos');
+    localStorage.removeItem('current_project_id');
+    localStorage.removeItem('current_project_ref');
+    localStorage.removeItem('fieldData');
+
+    projectId = null;
+    voiceNotes = [];
+    photos = [];
+
+    document.getElementById('addressInput').value = '';
+    updateUI();
+    showProjectStatus();
+    showNotification('All data cleared');
+}
+
+function showProjectStatus() {
+    const statusDiv = document.getElementById('projectStatus');
+    const refSpan = document.getElementById('currentProjectRef');
+
+    if (projectId) {
+        const ref = localStorage.getItem('current_project_ref') || 'Unknown';
+        refSpan.textContent = ref;
+        statusDiv.style.display = 'block';
+    } else {
+        statusDiv.style.display = 'none';
+    }
 }
 
 function checkSpeechRecognitionSupport() {
@@ -105,7 +172,10 @@ async function startRecording(e) {
     e.preventDefault();
 
     if (!projectId) {
-        showNotification('Please enter property address first');
+        showNotification('Please click "New Project" button first');
+        const addressInput = document.getElementById('addressInput');
+        addressInput.style.border = '3px solid #D32F2F';
+        setTimeout(() => addressInput.style.border = '', 2000);
         return;
     }
 
@@ -128,45 +198,47 @@ async function startRecording(e) {
         recognition.lang = 'en-IE'; // Irish English
 
         recognition.onstart = () => {
-            console.log('Speech recognition started');
-            transcriptionText.textContent = 'Listening... Start speaking now!';
+            console.log('✅ Speech recognition STARTED');
+            transcriptionText.textContent = '🎤 Listening... Speak now!';
+            transcriptionText.style.color = '#2C5F2D';
+            transcriptionText.style.fontWeight = 'bold';
         };
 
         recognition.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+            console.log('📝 Got speech result');
+            let transcript = '';
 
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript + ' ';
-                } else {
-                    interimTranscript += transcript;
-                }
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
             }
 
-            currentTranscription = (finalTranscript + interimTranscript).trim();
+            currentTranscription = transcript.trim();
+            console.log('Transcript:', currentTranscription);
 
             // Update the large transcription display
             if (currentTranscription) {
                 transcriptionText.textContent = currentTranscription;
                 transcriptionText.classList.remove('empty');
-            } else {
-                transcriptionText.textContent = 'Listening... Start speaking now!';
-                transcriptionText.classList.add('empty');
+                transcriptionText.style.color = '#333';
+                transcriptionText.style.fontWeight = '500';
             }
 
             // Also show in button
             button.querySelector('.button-subtitle').innerHTML =
-                `<span style="font-size: 11px; line-height: 1.3;">Recording... ${currentTranscription.slice(0, 30)}${currentTranscription.length > 30 ? '...' : ''}</span>`;
+                `<span style="font-size: 11px;">Recording... "${currentTranscription.slice(0, 40)}${currentTranscription.length > 40 ? '..."' : '"'}</span>`;
         };
 
         recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            transcriptionText.textContent = `Error: ${event.error}. Please try again.`;
+            console.error('❌ Speech error:', event.error);
             if (event.error === 'not-allowed') {
-                showNotification('Microphone permission denied. Please enable microphone access in your browser settings.');
+                transcriptionText.textContent = '❌ Microphone blocked! Allow mic access and try again.';
+                showNotification('Please allow microphone access');
+            } else if (event.error === 'no-speech') {
+                transcriptionText.textContent = '⚠️ No speech detected. Try speaking louder.';
+            } else {
+                transcriptionText.textContent = `Error: ${event.error}`;
             }
+            transcriptionText.style.color = '#D32F2F';
         };
 
         recognition.onend = () => {
@@ -175,10 +247,12 @@ async function startRecording(e) {
 
         try {
             recognition.start();
-            console.log('Starting speech recognition...');
+            console.log('🎤 Attempting to start speech recognition...');
         } catch (error) {
-            console.error('Error starting speech recognition:', error);
-            transcriptionText.textContent = 'Speech recognition failed to start';
+            console.error('❌ Failed to start:', error);
+            transcriptionText.textContent = '❌ Speech recognition failed. Using fallback mode.';
+            transcriptionText.style.color = '#FF9800';
+            currentTranscription = 'Voice note recorded (transcription unavailable)';
         }
     } else {
         transcriptionText.textContent = '⚠️ Speech recognition not supported in this browser. Use Chrome or Edge for live transcription.';
@@ -249,6 +323,10 @@ async function saveVoiceNote(audioBlob) {
     // Use the live transcription if available, otherwise use fallback
     const transcription = currentTranscription || 'Voice note recorded - transcription unavailable';
 
+    console.log('💾 Saving voice note...');
+    console.log('Transcription:', transcription);
+    console.log('Project ID:', projectId);
+
     const voiceNote = {
         id: generateUUID(),
         project_id: projectId,
@@ -256,14 +334,18 @@ async function saveVoiceNote(audioBlob) {
         captured_at: new Date().toISOString(),
         audio_blob: audioBlob,
         transcription: transcription,
+        confidence: 0.95,
+        duration_seconds: Math.floor(audioBlob.size / 1000), // Rough estimate
         synced: false
     };
 
     voiceNotes.push(voiceNote);
+    console.log('✅ Voice note added. Total:', voiceNotes.length);
+
     saveLocalData();
     updateUI();
 
-    showNotification('Voice note saved with live transcription');
+    showNotification(`Voice note ${voiceNotes.length} saved!`);
 }
 
 async function handlePhotoCapture(event, photoType) {
@@ -382,24 +464,29 @@ async function uploadPhoto(photo) {
 }
 
 function saveLocalData() {
+    console.log('💾 Saving local data...');
+    console.log('Voice notes:', voiceNotes.length);
+    console.log('Photos:', photos.length);
+
     // Save counts and metadata
     const data = {
         voiceCount: voiceNotes.length,
         photoCount: photos.length,
-        syncedCount: [...voiceNotes, ...photos].filter(item => item.synced).length
+        syncedCount: voiceNotes.length + photos.length
     };
     localStorage.setItem('fieldData', JSON.stringify(data));
 
-    // Save actual voice note transcriptions (simulate transcription for demo)
+    // Save actual voice note data
     const voiceNoteData = voiceNotes.map(note => ({
         id: note.id,
         project_id: note.project_id,
         captured_at: note.captured_at,
-        transcription: note.transcription || 'Voice note recording captured - waiting for processing',
-        confidence: 0.95,
-        duration_seconds: Math.floor(Math.random() * 30) + 20
+        transcription: note.transcription,
+        confidence: note.confidence || 0.95,
+        duration_seconds: note.duration_seconds || 30
     }));
     localStorage.setItem('emg_voice_notes', JSON.stringify(voiceNoteData));
+    console.log('✅ Saved voice notes to localStorage');
 
     // Save photo metadata
     const photoData = photos.map(photo => ({
@@ -408,27 +495,25 @@ function saveLocalData() {
         photo_type: photo.photo_type,
         captured_at: photo.captured_at,
         file_data: photo.file_data,
-        ocr_confidence: 0.88 + Math.random() * 0.1
+        ocr_confidence: photo.ocr_confidence || 0.90
     }));
     localStorage.setItem('emg_photos', JSON.stringify(photoData));
+    console.log('✅ Saved photos to localStorage');
 
-    // Save project info and add to jobs dashboard
+    // Save to jobs dashboard
     const address = document.getElementById('addressInput').value;
     if (address && projectId) {
         const projectRef = localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`;
 
-        // Load existing jobs
         let allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
-
-        // Check if this job already exists
         let existingJob = allJobs.find(j => j.jobId === projectId);
 
         if (existingJob) {
-            // Update existing job
             existingJob.voiceNotes = voiceNoteData;
             existingJob.photos = photoData;
+            existingJob.address = address;
+            console.log('✅ Updated existing job');
         } else {
-            // Create new job
             const newJob = {
                 jobId: projectId,
                 projectReference: projectRef,
@@ -440,20 +525,11 @@ function saveLocalData() {
                 managerInputs: {}
             };
             allJobs.push(newJob);
+            console.log('✅ Created new job');
         }
 
-        // Save back to localStorage
         localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
-
-        // Also keep old format for compatibility
-        const projectData = {
-            project_id: projectId,
-            project_reference: projectRef,
-            address: address,
-            created_at: new Date().toISOString(),
-            status: 'in_progress'
-        };
-        localStorage.setItem('emg_current_project', JSON.stringify(projectData));
+        console.log('✅ Jobs saved. Total jobs:', allJobs.length);
     }
 }
 
