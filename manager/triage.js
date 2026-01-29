@@ -7,6 +7,8 @@ const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:5000/api'
     : '/api';
 
+let allJobs = [];
+let currentJobId = null;
 let currentProject = null;
 let currentTestResults = [];
 let editingTestId = null;
@@ -15,7 +17,182 @@ let editingTestId = null;
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-    await loadPendingProjects();
+    loadAllJobs();
+    displayJobsDashboard();
+}
+
+function loadAllJobs() {
+    // Load all jobs from localStorage
+    const stored Jobs = localStorage.getItem('emg_all_jobs');
+    if (storedJobs) {
+        allJobs = JSON.parse(storedJobs);
+    } else {
+        // Check if there's a current project (old format)
+        const currentProject = JSON.parse(localStorage.getItem('emg_current_project') || 'null');
+        if (currentProject) {
+            // Convert old format to new job format
+            allJobs = [{
+                jobId: currentProject.project_id,
+                projectReference: currentProject.project_reference,
+                address: currentProject.address,
+                createdAt: currentProject.created_at,
+                status: 'in-progress',
+                voiceNotes: JSON.parse(localStorage.getItem('emg_voice_notes') || '[]'),
+                photos: JSON.parse(localStorage.getItem('emg_photos') || '[]'),
+                managerInputs: JSON.parse(localStorage.getItem('emg_manager_inputs') || '{}')
+            }];
+            saveAllJobs();
+        }
+    }
+}
+
+function saveAllJobs() {
+    localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+}
+
+function displayJobsDashboard() {
+    const grid = document.getElementById('jobsGrid');
+
+    if (allJobs.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                <h2 style="color: #2C5F2D; margin-bottom: 20px;">📋 No Jobs Yet</h2>
+                <p style="color: #666; font-size: 16px; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Jobs are automatically created when you capture data in the Field Operator interface.<br>
+                    You can also create a new job manually by clicking the + button below.
+                </p>
+                <a href="../field/index.html" style="display: inline-block; padding: 15px 30px; background: #2C5F2D; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                    🎤 Go to Field Interface
+                </a>
+            </div>
+        `;
+        document.getElementById('pendingCount').textContent = '0 Pending';
+        return;
+    }
+
+    grid.innerHTML = allJobs.map(job => `
+        <div class="job-card">
+            <div class="job-ref">${job.projectReference}</div>
+            <div class="job-address">${job.address}</div>
+
+            <select class="status-select" onchange="updateJobStatus('${job.jobId}', this.value)">
+                <option value="pending" ${job.status === 'pending' ? 'selected' : ''}>📋 Pending</option>
+                <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>🔄 In Progress</option>
+                <option value="review" ${job.status === 'review' ? 'selected' : ''}>⚠️ Needs Review</option>
+                <option value="completed" ${job.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
+            </select>
+
+            <div class="job-meta">
+                <span>🎤 ${job.voiceNotes.length} Notes</span>
+                <span>📷 ${job.photos.length} Photos</span>
+                <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+            </div>
+
+            <div class="job-actions">
+                <button class="job-btn job-btn-primary" onclick="openJobDetail('${job.jobId}')">
+                    📊 View Details
+                </button>
+                <button class="job-btn job-btn-secondary" onclick="deleteJob('${job.jobId}')">
+                    🗑️ Delete
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    // Update pending count
+    const pendingCount = allJobs.filter(j => j.status !== 'completed').length;
+    document.getElementById('pendingCount').textContent = `${pendingCount} Pending`;
+}
+
+function updateJobStatus(jobId, newStatus) {
+    const job = allJobs.find(j => j.jobId === jobId);
+    if (job) {
+        job.status = newStatus;
+        saveAllJobs();
+        displayJobsDashboard();
+        showNotification(`Status updated to: ${newStatus}`);
+    }
+}
+
+function deleteJob(jobId) {
+    if (confirm('Are you sure you want to delete this job? This cannot be undone.')) {
+        allJobs = allJobs.filter(j => j.jobId !== jobId);
+        saveAllJobs();
+        displayJobsDashboard();
+        showNotification('Job deleted');
+    }
+}
+
+function createNewJob() {
+    const address = prompt('Enter property address for new job:');
+    if (!address) return;
+
+    const newJob = {
+        jobId: generateUUID(),
+        projectReference: `EMG-${new Date().getFullYear()}-${generateShortId()}`,
+        address: address,
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        voiceNotes: [],
+        photos: [],
+        managerInputs: {}
+    };
+
+    allJobs.push(newJob);
+    saveAllJobs();
+    displayJobsDashboard();
+    showNotification('New job created');
+}
+
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function generateShortId() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function openJobDetail(jobId) {
+    currentJobId = jobId;
+    const job = allJobs.find(j => j.jobId === jobId);
+    if (!job) return;
+
+    document.getElementById('modalJobTitle').textContent = job.projectReference;
+    document.getElementById('jobDetailModal').classList.add('active');
+
+    // Load job data into the detail view
+    loadDemoProjectDetails(jobId, job);
+}
+
+function closeJobModal() {
+    document.getElementById('jobDetailModal').classList.remove('active');
+    currentJobId = null;
+}
+
+function saveAndCloseJobModal() {
+    if (!currentJobId) return;
+
+    // Save manager inputs for this specific job
+    const job = allJobs.find(j => j.jobId === currentJobId);
+    if (job) {
+        job.managerInputs = {
+            notes: document.getElementById('managerNotes').value,
+            customRecommendations: document.getElementById('customRecommendations').value,
+            floorArea: document.getElementById('floorArea').value,
+            yearBuilt: document.getElementById('yearBuilt').value,
+            berRating: document.getElementById('berRating').value,
+            propertyType: document.getElementById('propertyType').value
+        };
+        saveAllJobs();
+        showNotification('Job data saved');
+    }
+
+    closeJobModal();
+    displayJobsDashboard();
 }
 
 async function loadPendingProjects() {
@@ -119,15 +296,40 @@ async function loadProjectDetails(projectId) {
     }
 }
 
-function loadDemoProjectDetails(projectId) {
-    // Load REAL captured data from localStorage
-    const project = JSON.parse(localStorage.getItem('emg_current_project') || 'null');
-    const voiceNotes = JSON.parse(localStorage.getItem('emg_voice_notes') || '[]');
-    const photos = JSON.parse(localStorage.getItem('emg_photos') || '[]');
-
-    if (!project) {
-        return;
+function loadDemoProjectDetails(projectId, job = null) {
+    // Load job-specific data
+    if (!job) {
+        job = allJobs.find(j => j.jobId === projectId);
     }
+
+    if (!job) {
+        // Fallback to old localStorage format
+        const project = JSON.parse(localStorage.getItem('emg_current_project') || 'null');
+        const voiceNotes = JSON.parse(localStorage.getItem('emg_voice_notes') || '[]');
+        const photos = JSON.parse(localStorage.getItem('emg_photos') || '[]');
+
+        if (!project) {
+            return;
+        }
+
+        job = {
+            jobId: project.project_id,
+            projectReference: project.project_reference,
+            address: project.address,
+            voiceNotes: voiceNotes,
+            photos: photos,
+            managerInputs: {}
+        };
+    }
+
+    const project = {
+        project_id: job.jobId,
+        reference: job.projectReference,
+        address: job.address
+    };
+
+    const voiceNotes = job.voiceNotes || [];
+    const photos = job.photos || [];
 
     // Generate simulated test results from captured data
     const testResults = [];
@@ -1054,23 +1256,33 @@ function formatTime(isoString) {
 }
 
 function saveManagerInputs() {
-    const managerData = {
-        notes: document.getElementById('managerNotes').value,
-        customRecommendations: document.getElementById('customRecommendations').value,
-        floorArea: document.getElementById('floorArea').value,
-        yearBuilt: document.getElementById('yearBuilt').value,
-        berRating: document.getElementById('berRating').value,
-        propertyType: document.getElementById('propertyType').value
-    };
+    if (!currentJobId) {
+        showNotification('No job selected');
+        return;
+    }
 
-    localStorage.setItem('emg_manager_inputs', JSON.stringify(managerData));
-    showNotification('Additional information saved');
+    const job = allJobs.find(j => j.jobId === currentJobId);
+    if (job) {
+        job.managerInputs = {
+            notes: document.getElementById('managerNotes').value,
+            customRecommendations: document.getElementById('customRecommendations').value,
+            floorArea: document.getElementById('floorArea').value,
+            yearBuilt: document.getElementById('yearBuilt').value,
+            berRating: document.getElementById('berRating').value,
+            propertyType: document.getElementById('propertyType').value
+        };
+        saveAllJobs();
+        showNotification('Additional information saved for this job');
+    }
 }
 
 function loadManagerInputs() {
-    const saved = localStorage.getItem('emg_manager_inputs');
-    if (saved) {
-        const data = JSON.parse(saved);
+    // Load manager inputs for the current job
+    if (!currentJobId) return;
+
+    const job = allJobs.find(j => j.jobId === currentJobId);
+    if (job && job.managerInputs) {
+        const data = job.managerInputs;
         document.getElementById('managerNotes').value = data.notes || '';
         document.getElementById('customRecommendations').value = data.customRecommendations || '';
         document.getElementById('floorArea').value = data.floorArea || '';

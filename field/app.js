@@ -471,12 +471,43 @@ function saveLocalData() {
     }));
     localStorage.setItem('emg_photos', JSON.stringify(photoData));
 
-    // Save project info
+    // Save project info and add to jobs dashboard
     const address = document.getElementById('addressInput').value;
     if (address && projectId) {
+        const projectRef = localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`;
+
+        // Load existing jobs
+        let allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+
+        // Check if this job already exists
+        let existingJob = allJobs.find(j => j.jobId === projectId);
+
+        if (existingJob) {
+            // Update existing job
+            existingJob.voiceNotes = voiceNoteData;
+            existingJob.photos = photoData;
+        } else {
+            // Create new job
+            const newJob = {
+                jobId: projectId,
+                projectReference: projectRef,
+                address: address,
+                createdAt: new Date().toISOString(),
+                status: 'in-progress',
+                voiceNotes: voiceNoteData,
+                photos: photoData,
+                managerInputs: {}
+            };
+            allJobs.push(newJob);
+        }
+
+        // Save back to localStorage
+        localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+
+        // Also keep old format for compatibility
         const projectData = {
             project_id: projectId,
-            project_reference: localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`,
+            project_reference: projectRef,
             address: address,
             created_at: new Date().toISOString(),
             status: 'in_progress'

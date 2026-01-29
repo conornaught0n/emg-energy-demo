@@ -66,34 +66,142 @@
         }
 
         .main-container {
-            display: flex;
-            height: calc(100vh - 80px);
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
-        .project-header-banner {
-            background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%);
-            color: white;
-            padding: 25px 30px;
-            margin-bottom: 0;
+        .dashboard-header {
+            margin-bottom: 30px;
         }
 
-        .project-ref-large {
-            font-size: 24px;
+        .dashboard-title {
+            font-size: 28px;
             font-weight: bold;
+            color: #2C5F2D;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .job-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border-color: #2C5F2D;
+        }
+
+        .job-ref {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2C5F2D;
             margin-bottom: 8px;
         }
 
-        .project-address-large {
-            font-size: 16px;
-            opacity: 0.95;
-            margin-bottom: 12px;
+        .job-address {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 14px;
         }
 
-        .project-meta-large {
+        .job-status {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .status-pending {
+            background: #FFF3CD;
+            color: #856404;
+        }
+
+        .status-in-progress {
+            background: #D1ECF1;
+            color: #0C5460;
+        }
+
+        .status-review {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .status-completed {
+            background: #D4EDDA;
+            color: #155724;
+        }
+
+        .job-meta {
             display: flex;
-            gap: 25px;
-            font-size: 14px;
-            opacity: 0.9;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .job-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .job-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .job-btn-primary {
+            background: #2C5F2D;
+            color: white;
+        }
+
+        .job-btn-primary:hover {
+            background: #1a3a1b;
+        }
+
+        .job-btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .job-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .status-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            cursor: pointer;
         }
 
         .badge {
@@ -426,37 +534,97 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             z-index: 1000;
-            justify-content: center;
-            align-items: center;
+            overflow-y: auto;
+            padding: 20px;
         }
 
         .modal.active {
-            display: flex;
+            display: block;
         }
 
         .modal-content {
             background: white;
-            padding: 30px;
+            padding: 0;
             border-radius: 12px;
-            max-width: 500px;
-            width: 90%;
+            max-width: 1200px;
+            width: 100%;
+            margin: 20px auto;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .modal-content input {
+        .modal-header {
+            background: #2C5F2D;
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 32px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-content input, .modal-content textarea, .modal-content select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 16px;
-            margin: 15px 0;
+            font-size: 14px;
+            margin: 10px 0;
+            font-family: inherit;
         }
 
         .modal-buttons {
             display: flex;
             gap: 10px;
             margin-top: 20px;
+        }
+
+        .add-job-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #2C5F2D;
+            color: white;
+            border: none;
+            font-size: 32px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .add-job-btn:hover {
+            transform: scale(1.1);
+            background: #1a3a1b;
         }
 
         @media (max-width: 1200px) {
@@ -482,42 +650,55 @@
         </div>
     </div>
 
-    <!-- Project Header Banner -->
-    <div class="project-header-banner" id="projectHeaderBanner" style="display: none;">
-        <div class="project-ref-large" id="projectRefBanner"></div>
-        <div class="project-address-large" id="projectAddressBanner"></div>
-        <div class="project-meta-large" id="projectMetaBanner"></div>
+    <div class="main-container">
+        <div class="dashboard-header">
+            <div class="dashboard-title">📊 Project Dashboard</div>
+            <div class="dashboard-subtitle">Manage assessments, review data, and generate reports</div>
+        </div>
+
+        <div class="jobs-grid" id="jobsGrid">
+            <!-- Job cards will be inserted here -->
+        </div>
     </div>
 
-    <div class="main-container">
-        <!-- Content Area -->
-        <div class="content-area" style="width: 100%;">
-            <!-- Evidence Panel -->
-            <div class="evidence-panel">
-                <div class="panel-title">📂 RAW EVIDENCE</div>
+    <!-- Add Job Button -->
+    <button class="add-job-btn" onclick="createNewJob()" title="Create New Job">+</button>
 
-                <div class="evidence-section">
-                    <div class="section-header">
-                        <span class="section-icon">🎤</span>
-                        <span>Voice Notes (<span id="voiceNoteCount">0</span>)</span>
-                    </div>
-                    <div id="voiceNotesList"></div>
-                </div>
-
-                <div class="evidence-section">
-                    <div class="section-header">
-                        <span class="section-icon">📷</span>
-                        <span>Photos (<span id="photoCount">0</span>)</span>
-                    </div>
-                    <div class="photo-grid" id="photoGrid"></div>
-                </div>
+    <!-- Job Detail Modal -->
+    <div class="modal" id="jobDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalJobTitle">Job Details</h2>
+                <button class="modal-close" onclick="closeJobModal()">&times;</button>
             </div>
+            <div class="modal-body">
+                <div class="content-area" style="width: 100%;">
+                    <!-- Evidence Panel -->
+                    <div class="evidence-panel" style="width: 100%; border: none;">
+                        <div class="panel-title">📂 RAW EVIDENCE</div>
 
-            <!-- Draft Panel -->
-            <div class="draft-panel">
-                <div class="panel-title">📄 AI-GENERATED DRAFT</div>
+                        <div class="evidence-section">
+                            <div class="section-header">
+                                <span class="section-icon">🎤</span>
+                                <span>Voice Notes (<span id="voiceNoteCount">0</span>)</span>
+                            </div>
+                            <div id="voiceNotesList"></div>
+                        </div>
 
-                <div class="draft-report" id="draftReport">
+                        <div class="evidence-section">
+                            <div class="section-header">
+                                <span class="section-icon">📷</span>
+                                <span>Photos (<span id="photoCount">0</span>)</span>
+                            </div>
+                            <div class="photo-grid" id="photoGrid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Draft Panel -->
+                    <div class="draft-panel" style="width: 100%; padding: 0; background: transparent;">
+                        <div class="panel-title">📄 ASSESSMENT REPORT</div>
+
+                        <div class="draft-report" id="draftReport">
                     <div class="report-header">
                         <div class="report-title">PROPERTY ASSESSMENT REPORT</div>
                         <div id="reportAddress"></div>
@@ -624,12 +805,11 @@
                         <button class="btn" style="background: #2196F3; color: white;" onclick="printReport()">
                             🖨️ PRINT REPORT
                         </button>
-                        <button class="btn btn-send-back" onclick="sendBackToField()">
-                            ↩️ SEND BACK
+                        <button class="btn btn-approve" onclick="saveAndCloseJobModal()">
+                            💾 SAVE & CLOSE
                         </button>
-                        <button class="btn btn-approve" onclick="approveAndGenerate()">
-                            ✅ APPROVE & PDF
-                        </button>
+                    </div>
+                </div>
                     </div>
                 </div>
             </div>
@@ -638,7 +818,7 @@
 
     <!-- Edit Value Modal -->
     <div class="modal" id="editModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 500px; padding: 30px;">
             <h3 id="editModalTitle">Edit Test Value</h3>
             <p id="editModalContext" style="color: #666; margin-top: 10px;"></p>
             <input type="number" step="0.01" id="editValueInput" placeholder="Enter new value" />
