@@ -231,6 +231,75 @@
             display: none;
         }
 
+        .transcription-display {
+            display: none;
+            background: white;
+            border: 3px solid #D32F2F;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(211, 47, 47, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+
+        .transcription-display.active {
+            display: block;
+        }
+
+        .transcription-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #D32F2F;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .recording-indicator {
+            width: 12px;
+            height: 12px;
+            background: #D32F2F;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+        }
+
+        .transcription-text {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #333;
+            min-height: 60px;
+            font-weight: 500;
+        }
+
+        .transcription-text.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .browser-warning {
+            background: #fff3cd;
+            border: 2px solid #FF9800;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .browser-warning.show {
+            display: block;
+        }
+
         .thumbnail-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -284,6 +353,23 @@
         <div class="project-info">
             <h2>Project Information</h2>
             <input type="text" id="addressInput" placeholder="Enter property address" />
+        </div>
+
+        <!-- Browser Warning -->
+        <div class="browser-warning" id="browserWarning">
+            <strong>⚠️ Browser Compatibility:</strong> Live transcription works best in <strong>Chrome</strong> or <strong>Edge</strong> browsers.
+            Make sure to allow microphone access when prompted.
+        </div>
+
+        <!-- Live Transcription Display -->
+        <div class="transcription-display" id="transcriptionDisplay">
+            <div class="transcription-header">
+                <div class="recording-indicator"></div>
+                <span>🎙️ LIVE TRANSCRIPTION</span>
+            </div>
+            <div class="transcription-text" id="transcriptionText">
+                Listening... Start speaking now!
+            </div>
         </div>
 
         <!-- Capture Buttons -->

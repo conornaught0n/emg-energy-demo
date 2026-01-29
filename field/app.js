@@ -28,6 +28,9 @@ function init() {
     // Load saved data from localStorage
     loadLocalData();
 
+    // Check browser compatibility
+    checkSpeechRecognitionSupport();
+
     // Setup event listeners
     document.getElementById('voiceButton').addEventListener('mousedown', startRecording);
     document.getElementById('voiceButton').addEventListener('mouseup', stopRecording);
@@ -51,6 +54,13 @@ function init() {
     document.getElementById('addressInput').addEventListener('blur', createProject);
 
     updateUI();
+}
+
+function checkSpeechRecognitionSupport() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('browserWarning').classList.add('show');
+        console.warn('Speech recognition not supported in this browser');
+    }
 }
 
 function generateUUID() {
@@ -120,7 +130,13 @@ async function startRecording(e) {
     }
 
     const button = document.getElementById('voiceButton');
+    const transcriptionDisplay = document.getElementById('transcriptionDisplay');
+    const transcriptionText = document.getElementById('transcriptionText');
+
     button.classList.add('recording');
+    transcriptionDisplay.classList.add('active');
+    transcriptionText.textContent = 'Listening... Start speaking now!';
+    transcriptionText.classList.add('empty');
     currentTranscription = '';
 
     // Start live speech recognition
@@ -130,6 +146,11 @@ async function startRecording(e) {
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-IE'; // Irish English
+
+        recognition.onstart = () => {
+            console.log('Speech recognition started');
+            transcriptionText.textContent = 'Listening... Start speaking now!';
+        };
 
         recognition.onresult = (event) => {
             let interimTranscript = '';
@@ -146,18 +167,43 @@ async function startRecording(e) {
 
             currentTranscription = (finalTranscript + interimTranscript).trim();
 
-            // Show live transcription
+            // Update the large transcription display
+            if (currentTranscription) {
+                transcriptionText.textContent = currentTranscription;
+                transcriptionText.classList.remove('empty');
+            } else {
+                transcriptionText.textContent = 'Listening... Start speaking now!';
+                transcriptionText.classList.add('empty');
+            }
+
+            // Also show in button
             button.querySelector('.button-subtitle').innerHTML =
-                `<span style="font-size: 11px; line-height: 1.3;">${currentTranscription || 'Listening...'}</span>`;
+                `<span style="font-size: 11px; line-height: 1.3;">Recording... ${currentTranscription.slice(0, 30)}${currentTranscription.length > 30 ? '...' : ''}</span>`;
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
+            transcriptionText.textContent = `Error: ${event.error}. Please try again.`;
+            if (event.error === 'not-allowed') {
+                showNotification('Microphone permission denied. Please enable microphone access in your browser settings.');
+            }
         };
 
-        recognition.start();
+        recognition.onend = () => {
+            console.log('Speech recognition ended');
+        };
+
+        try {
+            recognition.start();
+            console.log('Starting speech recognition...');
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            transcriptionText.textContent = 'Speech recognition failed to start';
+        }
     } else {
-        button.querySelector('.button-subtitle').textContent = 'Recording... (Speech recognition not available)';
+        transcriptionText.textContent = '⚠️ Speech recognition not supported in this browser. Use Chrome or Edge for live transcription.';
+        transcriptionText.classList.remove('empty');
+        button.querySelector('.button-subtitle').textContent = 'Recording... (No live transcription)';
     }
 
     try {
@@ -180,8 +226,9 @@ async function startRecording(e) {
         mediaRecorder.start();
     } catch (error) {
         console.error('Error starting recording:', error);
-        showNotification('Microphone access denied');
+        showNotification('Microphone access denied. Please allow microphone access.');
         button.classList.remove('recording');
+        transcriptionDisplay.classList.remove('active');
         if (recognition) recognition.stop();
     }
 }
@@ -198,14 +245,23 @@ function stopRecording(e) {
         }
 
         const button = document.getElementById('voiceButton');
+        const transcriptionDisplay = document.getElementById('transcriptionDisplay');
+        const transcriptionText = document.getElementById('transcriptionText');
+
         button.classList.remove('recording');
         button.classList.add('success');
-        button.querySelector('.button-subtitle').textContent = 'Voice note saved!';
+
+        // Show success message in transcription display
+        transcriptionText.textContent = `✅ Saved: "${currentTranscription || 'Voice note recorded'}"`;
+        transcriptionText.classList.remove('empty');
+
+        button.querySelector('.button-subtitle').textContent = 'Voice note saved with transcription!';
 
         setTimeout(() => {
             button.classList.remove('success');
             button.querySelector('.button-subtitle').textContent = 'Hold to record';
-        }, 2000);
+            transcriptionDisplay.classList.remove('active');
+        }, 3000);
     }
 }
 
