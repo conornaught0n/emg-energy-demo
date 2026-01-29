@@ -87,6 +87,49 @@
             font-size: 16px;
         }
 
+        .dashboard-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #2C5F2D;
+        }
+
+        .tab-btn.active {
+            color: #2C5F2D;
+            border-bottom-color: #2C5F2D;
+        }
+
+        .tab-count {
+            display: inline-block;
+            background: #e0e0e0;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .tab-btn.active .tab-count {
+            background: #2C5F2D;
+            color: white;
+        }
+
         .jobs-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -654,6 +697,21 @@
         <div class="dashboard-header">
             <div class="dashboard-title">📊 Project Dashboard</div>
             <div class="dashboard-subtitle">Manage assessments, review data, and generate reports</div>
+
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" onclick="filterJobs('active')" id="tabActive">
+                    🔄 Active Projects <span class="tab-count" id="countActive">0</span>
+                </button>
+                <button class="tab-btn" onclick="filterJobs('review')" id="tabReview">
+                    ⚠️ Needs Review <span class="tab-count" id="countReview">0</span>
+                </button>
+                <button class="tab-btn" onclick="filterJobs('completed')" id="tabCompleted">
+                    ✅ Past Projects <span class="tab-count" id="countCompleted">0</span>
+                </button>
+                <button class="tab-btn" onclick="filterJobs('all')" id="tabAll">
+                    📋 All Projects <span class="tab-count" id="countAll">0</span>
+                </button>
+            </div>
         </div>
 
         <div class="jobs-grid" id="jobsGrid">
@@ -668,6 +726,11 @@
     <div class="modal" id="jobDetailModal">
         <div class="modal-content">
             <div class="modal-header">
+                <div>
+                    <button onclick="closeJobModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 15px; font-weight: bold;">
+                        ← Back to Dashboard
+                    </button>
+                </div>
                 <h2 id="modalJobTitle">Job Details</h2>
                 <button class="modal-close" onclick="closeJobModal()">&times;</button>
             </div>
@@ -802,11 +865,17 @@
                     </div>
 
                     <div class="action-buttons">
+                        <button class="btn" style="background: #666; color: white;" onclick="closeJobModal()">
+                            ← BACK
+                        </button>
+                        <button class="btn" style="background: #FF9800; color: white;" onclick="saveManagerInputs()">
+                            💾 SAVE
+                        </button>
                         <button class="btn" style="background: #2196F3; color: white;" onclick="printReport()">
-                            🖨️ PRINT REPORT
+                            🖨️ PDF
                         </button>
                         <button class="btn btn-approve" onclick="saveAndCloseJobModal()">
-                            💾 SAVE & CLOSE
+                            ✅ SAVE & CLOSE
                         </button>
                     </div>
                 </div>

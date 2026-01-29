@@ -12,12 +12,39 @@ let currentJobId = null;
 let currentProject = null;
 let currentTestResults = [];
 let editingTestId = null;
+let currentFilter = 'active';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
     loadAllJobs();
+    updateTabCounts();
+    displayJobsDashboard();
+}
+
+function updateTabCounts() {
+    const activeCount = allJobs.filter(j => j.status === 'pending' || j.status === 'in-progress').length;
+    const reviewCount = allJobs.filter(j => j.status === 'review').length;
+    const completedCount = allJobs.filter(j => j.status === 'completed').length;
+    const allCount = allJobs.length;
+
+    document.getElementById('countActive').textContent = activeCount;
+    document.getElementById('countReview').textContent = reviewCount;
+    document.getElementById('countCompleted').textContent = completedCount;
+    document.getElementById('countAll').textContent = allCount;
+
+    // Update pending count in header
+    document.getElementById('pendingCount').textContent = `${activeCount + reviewCount} Pending`;
+}
+
+function filterJobs(filterType) {
+    currentFilter = filterType;
+
+    // Update active tab
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab' + filterType.charAt(0).toUpperCase() + filterType.slice(1)).classList.add('active');
+
     displayJobsDashboard();
 }
 
@@ -53,6 +80,16 @@ function saveAllJobs() {
 function displayJobsDashboard() {
     const grid = document.getElementById('jobsGrid');
 
+    // Filter jobs based on current filter
+    let filteredJobs = allJobs;
+    if (currentFilter === 'active') {
+        filteredJobs = allJobs.filter(j => j.status === 'pending' || j.status === 'in-progress');
+    } else if (currentFilter === 'review') {
+        filteredJobs = allJobs.filter(j => j.status === 'review');
+    } else if (currentFilter === 'completed') {
+        filteredJobs = allJobs.filter(j => j.status === 'completed');
+    }
+
     if (allJobs.length === 0) {
         grid.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
@@ -66,11 +103,23 @@ function displayJobsDashboard() {
                 </a>
             </div>
         `;
-        document.getElementById('pendingCount').textContent = '0 Pending';
         return;
     }
 
-    grid.innerHTML = allJobs.map(job => `
+    if (filteredJobs.length === 0) {
+        const filterName = currentFilter === 'active' ? 'Active Projects' :
+                          currentFilter === 'review' ? 'Projects Needing Review' :
+                          currentFilter === 'completed' ? 'Completed Projects' : 'Projects';
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                <h3 style="color: #666; margin-bottom: 20px;">No ${filterName}</h3>
+                <p style="color: #999;">Try selecting a different tab or create a new project</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = filteredJobs.map(job => `
         <div class="job-card">
             <div class="job-ref">${job.projectReference}</div>
             <div class="job-address">${job.address}</div>
@@ -99,9 +148,7 @@ function displayJobsDashboard() {
         </div>
     `).join('');
 
-    // Update pending count
-    const pendingCount = allJobs.filter(j => j.status !== 'completed').length;
-    document.getElementById('pendingCount').textContent = `${pendingCount} Pending`;
+    updateTabCounts();
 }
 
 function updateJobStatus(jobId, newStatus) {
@@ -109,8 +156,16 @@ function updateJobStatus(jobId, newStatus) {
     if (job) {
         job.status = newStatus;
         saveAllJobs();
+        updateTabCounts();
         displayJobsDashboard();
-        showNotification(`Status updated to: ${newStatus}`);
+
+        const statusNames = {
+            'pending': 'Pending',
+            'in-progress': 'In Progress',
+            'review': 'Needs Review',
+            'completed': 'Completed'
+        };
+        showNotification(`Status updated to: ${statusNames[newStatus]}`);
     }
 }
 
@@ -118,6 +173,7 @@ function deleteJob(jobId) {
     if (confirm('Are you sure you want to delete this job? This cannot be undone.')) {
         allJobs = allJobs.filter(j => j.jobId !== jobId);
         saveAllJobs();
+        updateTabCounts();
         displayJobsDashboard();
         showNotification('Job deleted');
     }
@@ -140,7 +196,11 @@ function createNewJob() {
 
     allJobs.push(newJob);
     saveAllJobs();
-    displayJobsDashboard();
+    updateTabCounts();
+
+    // Switch to active tab to show the new job
+    filterJobs('active');
+
     showNotification('New job created');
 }
 
