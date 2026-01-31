@@ -260,6 +260,11 @@
                         <label>Address *</label>
                         <input type="text" id="newJobAddr" placeholder="Full address" required>
 
+                        <label>Survey Type *</label>
+                        <select id="newJobType" required>
+                            <option value="">-- Select Survey Type --</option>
+                        </select>
+
                         <label>Assign to Staff</label>
                         <select id="newJobStaff">
                             <option value="">-- Unassigned --</option>
@@ -680,12 +685,14 @@
                 jobId: 'job-' + Date.now(),
                 projectReference: document.getElementById('newJobRef').value.trim(),
                 address: document.getElementById('newJobAddr').value.trim(),
+                jobTypeId: document.getElementById('newJobType').value,
                 status: document.getElementById('newJobStatus').value,
                 assignedTo: document.getElementById('newJobStaff').value || null,
                 createdAt: new Date().toISOString(),
                 createdBy: STATE.user.name,
                 voiceNotes: [],
                 photos: [],
+                checkedItems: {},
                 managerInputs: {
                     notes: document.getElementById('newJobNotes').value.trim()
                 }
@@ -728,6 +735,20 @@
                     opt.value = STATE.staffList[j];
                     opt.textContent = STATE.staffList[j];
                     sel.appendChild(opt);
+                }
+            }
+
+            // Populate job type dropdown
+            var jobTypes = getJobTypes();
+            var jobTypeSel = document.getElementById('newJobType');
+            if (jobTypeSel) {
+                for (var key in jobTypes) {
+                    if (jobTypes.hasOwnProperty(key)) {
+                        var opt = document.createElement('option');
+                        opt.value = key;
+                        opt.textContent = jobTypes[key].icon + ' ' + jobTypes[key].name;
+                        jobTypeSel.appendChild(opt);
+                    }
                 }
             }
         }
@@ -1028,6 +1049,203 @@
                     }
                 }
 
+                // ========== CHECKLIST COMPLETION (if job type exists) ==========
+                if (job.jobTypeId && job.checkedItems) {
+                    if (y > 200) {
+                        doc.addPage();
+                        doc.setFillColor(44, 95, 45);
+                        doc.rect(0, 0, pageWidth, 15, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                        doc.setTextColor(0, 0, 0);
+                        y = 30;
+                    } else {
+                        y += 15;
+                    }
+
+                    doc.setFontSize(16);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('SURVEY COMPLETION STATUS', 20, y);
+                    y += 10;
+
+                    // Run AI analysis
+                    var aiAnalysis = AI_PROCESSOR.analyzeProject(job);
+                    var completionPct = aiAnalysis.completionPercentage;
+
+                    // Completion bar
+                    doc.setFontSize(12);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('Overall Completion:', 20, y);
+                    doc.setFont(undefined, 'bold');
+                    doc.setFontSize(18);
+                    doc.setTextColor(completionPct >= 80 ? 76 : 255, completionPct >= 80 ? 175 : 152, completionPct >= 80 ? 80 : 0);
+                    doc.text(completionPct + '%', 80, y);
+                    y += 5;
+
+                    // Progress bar
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.5);
+                    doc.rect(20, y, pageWidth - 40, 8);
+                    doc.setFillColor(completionPct >= 80 ? 76 : 255, completionPct >= 80 ? 175 : 152, completionPct >= 80 ? 80 : 0);
+                    doc.rect(20, y, (pageWidth - 40) * (completionPct / 100), 8, 'F');
+                    y += 15;
+
+                    // Checklist summary by category
+                    var jobType = getJobType(job.jobTypeId);
+                    if (jobType && jobType.checklist) {
+                        doc.setFontSize(11);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('Checklist Summary:', 20, y);
+                        y += 8;
+
+                        doc.setFont(undefined, 'normal');
+                        doc.setFontSize(10);
+
+                        for (var i = 0; i < jobType.checklist.length; i++) {
+                            if (y > 270) {
+                                doc.addPage();
+                                doc.setFillColor(44, 95, 45);
+                                doc.rect(0, 0, pageWidth, 15, 'F');
+                                doc.setTextColor(255, 255, 255);
+                                doc.setFontSize(10);
+                                doc.setFont(undefined, 'bold');
+                                doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                                doc.setTextColor(0, 0, 0);
+                                y = 30;
+                            }
+
+                            var category = jobType.checklist[i];
+                            var categoryChecked = 0;
+                            for (var j = 0; j < category.items.length; j++) {
+                                if (aiAnalysis.checkedItems[category.items[j].id]) {
+                                    categoryChecked++;
+                                }
+                            }
+                            var categoryPct = Math.round((categoryChecked / category.items.length) * 100);
+                            var statusIcon = categoryPct === 100 ? '✓' : categoryPct >= 50 ? '◐' : '○';
+
+                            doc.setTextColor(categoryPct === 100 ? 76 : 100, categoryPct === 100 ? 175 : 100, categoryPct === 100 ? 80 : 100);
+                            doc.text(statusIcon + ' ' + category.category + ': ' + categoryChecked + '/' + category.items.length + ' (' + categoryPct + '%)', 25, y);
+                            y += 6;
+                        }
+                        y += 5;
+                    }
+
+                    // Outstanding items
+                    if (aiAnalysis.suggestions && aiAnalysis.suggestions.length > 0) {
+                        if (y > 240) {
+                            doc.addPage();
+                            doc.setFillColor(44, 95, 45);
+                            doc.rect(0, 0, pageWidth, 15, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                            doc.setTextColor(0, 0, 0);
+                            y = 30;
+                        }
+
+                        y += 5;
+                        doc.setFontSize(12);
+                        doc.setFont(undefined, 'bold');
+                        doc.setTextColor(255, 152, 0);
+                        doc.text('⚠ OUTSTANDING SURVEY ITEMS', 20, y);
+                        y += 8;
+
+                        doc.setFontSize(10);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont(undefined, 'normal');
+
+                        for (var i = 0; i < Math.min(aiAnalysis.suggestions.length, 3); i++) {
+                            var suggestion = aiAnalysis.suggestions[i];
+                            if (y > 260) break; // Don't overflow page
+
+                            doc.setFont(undefined, 'bold');
+                            doc.text(suggestion.category + ':', 25, y);
+                            y += 5;
+                            doc.setFont(undefined, 'normal');
+
+                            for (var j = 0; j < Math.min(suggestion.items.length, 3); j++) {
+                                if (y > 270) break;
+                                doc.text('• ' + suggestion.items[j], 30, y);
+                                y += 5;
+                            }
+                            if (suggestion.items.length > 3) {
+                                doc.text('• ...and ' + (suggestion.items.length - 3) + ' more items', 30, y);
+                                y += 5;
+                            }
+                            y += 3;
+                        }
+                    }
+                }
+
+                // ========== PHOTOS SECTION ==========
+                if (job.photos && job.photos.length > 0) {
+                    doc.addPage();
+                    doc.setFillColor(44, 95, 45);
+                    doc.rect(0, 0, pageWidth, 15, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                    y = 30;
+
+                    doc.setFontSize(16);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('SITE PHOTOGRAPHS', 20, y);
+                    y += 10;
+
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('Equipment screens, clipboard data, and site condition photographs', 20, y);
+                    y += 15;
+
+                    // Display photos (max 6 photos to prevent file size issues)
+                    for (var i = 0; i < Math.min(job.photos.length, 6); i++) {
+                        if (y > 200) {
+                            doc.addPage();
+                            doc.setFillColor(44, 95, 45);
+                            doc.rect(0, 0, pageWidth, 15, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                            doc.setTextColor(0, 0, 0);
+                            y = 30;
+                        }
+
+                        try {
+                            doc.setFontSize(9);
+                            doc.setTextColor(100, 100, 100);
+                            doc.text('Photo ' + (i + 1) + ' - ' + new Date(job.photos[i].timestamp).toLocaleString('en-IE'), 20, y);
+                            y += 5;
+
+                            // Add image (scaled to fit)
+                            var imgWidth = pageWidth - 40;
+                            var imgHeight = 60; // Fixed height
+                            doc.addImage(job.photos[i].data, 'JPEG', 20, y, imgWidth, imgHeight);
+                            y += imgHeight + 15;
+                        } catch(imgErr) {
+                            doc.setTextColor(150, 150, 150);
+                            doc.text('[Photo ' + (i + 1) + ' - Unable to embed]', 20, y);
+                            y += 10;
+                        }
+                    }
+
+                    if (job.photos.length > 6) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text('+ ' + (job.photos.length - 6) + ' additional photos not shown', 20, y);
+                    }
+                }
+
                 // ========== COMPLIANCE SECTION ==========
                 if (y > 220) {
                     doc.addPage();
@@ -1153,15 +1371,28 @@
                 doc.save(fileName);
 
                 log('✅ Professional BER Report downloaded: ' + fileName);
-                alert('✅ Professional BER Report Downloaded!\n\n' +
-                      'File: ' + fileName + '\n\n' +
-                      'This report includes:\n' +
-                      '• Professional cover page\n' +
+                var reportFeatures = '• Professional cover page with EMG branding\n' +
                       '• Executive summary\n' +
-                      '• Survey observations\n' +
-                      '• Compliance statements\n' +
-                      '• Recommendations\n' +
-                      '• Full EMG branding\n\n' +
+                      '• AI-analyzed survey observations\n';
+
+                if (job.jobTypeId && job.checkedItems) {
+                    reportFeatures += '• Checklist completion status (' + aiAnalysis.completionPercentage + '%)\n';
+                    if (aiAnalysis.suggestions && aiAnalysis.suggestions.length > 0) {
+                        reportFeatures += '• Outstanding items identified\n';
+                    }
+                }
+
+                if (job.photos && job.photos.length > 0) {
+                    reportFeatures += '• Site photographs (' + Math.min(job.photos.length, 6) + ' photos)\n';
+                }
+
+                reportFeatures += '• Regulatory compliance statements\n' +
+                      '• Professional recommendations\n' +
+                      '• Full technical specifications';
+
+                alert('✅ Professional BER Report Generated!\n\n' +
+                      'File: ' + fileName + '\n\n' +
+                      'Report includes:\n' + reportFeatures + '\n\n' +
                       'Check your Downloads folder.');
 
             } catch(err) {
