@@ -153,7 +153,7 @@
                 <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Manager Dashboard v1</div>
             </div>
             <div class="header-right">
-                <button class="btn-success" onclick="window.location.href='final-field.html'">🎤 Field Capture</button>
+                <button class="btn-success" onclick="window.location.href='final-field.html'">📋 Surveyor Mode</button>
                 <div class="user-info">
                     <div class="user-name" id="userName">Manager</div>
                     <div class="user-role">Administrator</div>
@@ -540,7 +540,7 @@
             var container = document.getElementById('recentJobs');
 
             if (STATE.jobs.length === 0) {
-                container.innerHTML = '<div class="empty"><h2>📋 No Projects Yet</h2><p>Create projects using Field Capture or the Create Job tab.</p></div>';
+                container.innerHTML = '<div class="empty"><h2>📋 No Projects Yet</h2><p>Create projects using Surveyor Mode or the Create Job tab.</p></div>';
                 return;
             }
 
@@ -753,120 +753,377 @@
             try {
                 var { jsPDF } = window.jspdf;
                 var doc = new jsPDF();
+                var pageWidth = doc.internal.pageSize.getWidth();
+                var pageHeight = doc.internal.pageSize.getHeight();
 
-                // Header
-                doc.setFontSize(20);
-                doc.setTextColor(44, 95, 45); // EMG Green
-                doc.text('EMG Energy Assessment Report', 20, 20);
+                // ========== COVER PAGE ==========
+                // Green header box
+                doc.setFillColor(44, 95, 45);
+                doc.rect(0, 0, pageWidth, 60, 'F');
 
-                // Line under header
-                doc.setDrawColor(44, 95, 45);
-                doc.setLineWidth(0.5);
-                doc.line(20, 25, 190, 25);
+                // Title on cover
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(24);
+                doc.setFont(undefined, 'bold');
+                doc.text('BUILDING ENERGY', pageWidth / 2, 25, { align: 'center' });
+                doc.text('ASSESSMENT REPORT', pageWidth / 2, 35, { align: 'center' });
 
-                // Project Information
                 doc.setFontSize(12);
+                doc.setFont(undefined, 'normal');
+                doc.text('Irish Building Regulations Part L Compliance Survey', pageWidth / 2, 50, { align: 'center' });
+
+                // Property details box
                 doc.setTextColor(0, 0, 0);
-                var y = 35;
+                doc.setFillColor(248, 249, 250);
+                doc.roundedRect(20, 80, pageWidth - 40, 50, 3, 3, 'F');
+
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Property Address:', 30, 95);
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(12);
+                var addressLines = doc.splitTextToSize(job.address, pageWidth - 60);
+                doc.text(addressLines, 30, 105);
+
+                // Report details
+                var detailY = 150;
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'bold');
+                doc.text('Report Reference:', 30, detailY);
+                doc.setFont(undefined, 'normal');
+                doc.text(job.projectReference, 100, detailY);
+                detailY += 8;
 
                 doc.setFont(undefined, 'bold');
-                doc.text('Project Reference:', 20, y);
+                doc.text('Survey Date:', 30, detailY);
                 doc.setFont(undefined, 'normal');
-                doc.text(job.projectReference, 70, y);
+                doc.text(new Date(job.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'long', year: 'numeric' }), 100, detailY);
+                detailY += 8;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Assessor:', 30, detailY);
+                doc.setFont(undefined, 'normal');
+                doc.text(job.assignedTo || 'EMG Energy Surveyor', 100, detailY);
+                detailY += 8;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Assessment Status:', 30, detailY);
+                doc.setFont(undefined, 'normal');
+                doc.text(job.status.toUpperCase().replace('-', ' '), 100, detailY);
+
+                // Company details at bottom of cover
+                doc.setFontSize(10);
+                doc.setTextColor(44, 95, 45);
+                doc.setFont(undefined, 'bold');
+                doc.text('EMG ENERGY CONSULTANTS', pageWidth / 2, 230, { align: 'center' });
+
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                doc.setFont(undefined, 'normal');
+                doc.text('Suite 17, Block A, Clare Technology Park', pageWidth / 2, 240, { align: 'center' });
+                doc.text('Gort Road, Ennis, Co. Clare, Ireland', pageWidth / 2, 247, { align: 'center' });
+                doc.text('Tel: 065 672 9090 | Mobile: 087 944 4470', pageWidth / 2, 254, { align: 'center' });
+                doc.text('Email: info@emgenergy.ie | Web: www.emgenergy.ie', pageWidth / 2, 261, { align: 'center' });
+
+                // Compliance statement
+                doc.setFillColor(232, 245, 233);
+                doc.roundedRect(20, pageHeight - 35, pageWidth - 40, 20, 2, 2, 'F');
+                doc.setFontSize(8);
+                doc.setTextColor(44, 95, 45);
+                doc.text('This report has been prepared in accordance with the Technical Guidance Document L (TGD L 2022)', pageWidth / 2, pageHeight - 25, { align: 'center' });
+                doc.text('and the Building Regulations 1997-2023', pageWidth / 2, pageHeight - 20, { align: 'center' });
+
+                // ========== PAGE 2: EXECUTIVE SUMMARY ==========
+                doc.addPage();
+                var y = 20;
+
+                // Page header
+                doc.setFillColor(44, 95, 45);
+                doc.rect(0, 0, pageWidth, 15, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+
+                doc.setTextColor(0, 0, 0);
+                y = 30;
+
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('EXECUTIVE SUMMARY', 20, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                var summary = 'This report presents the findings of a comprehensive building energy assessment ' +
+                    'conducted at the above property in accordance with Irish Building Regulations Part L. ' +
+                    'The survey was performed by a qualified EMG Energy assessor using professional survey ' +
+                    'equipment and methodologies compliant with TGD L 2022 standards.';
+                var summaryLines = doc.splitTextToSize(summary, pageWidth - 40);
+                doc.text(summaryLines, 20, y);
+                y += summaryLines.length * 5 + 10;
+
+                // Survey scope
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('Survey Scope', 20, y);
                 y += 8;
 
-                doc.setFont(undefined, 'bold');
-                doc.text('Address:', 20, y);
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                var addressLines = doc.splitTextToSize(job.address, 120);
-                doc.text(addressLines, 70, y);
-                y += (addressLines.length * 6) + 2;
-
-                doc.setFont(undefined, 'bold');
-                doc.text('Date:', 20, y);
-                doc.setFont(undefined, 'normal');
-                doc.text(new Date(job.createdAt).toLocaleDateString(), 70, y);
-                y += 8;
-
-                doc.setFont(undefined, 'bold');
-                doc.text('Status:', 20, y);
-                doc.setFont(undefined, 'normal');
-                doc.text(job.status.toUpperCase(), 70, y);
-                y += 8;
-
-                if (job.assignedTo) {
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Field Officer:', 20, y);
-                    doc.setFont(undefined, 'normal');
-                    doc.text(job.assignedTo, 70, y);
-                    y += 8;
+                var scope = [
+                    '• Thermal envelope assessment (walls, roof, floors, windows, doors)',
+                    '• Space heating and hot water systems evaluation',
+                    '• Ventilation systems inspection',
+                    '• Building fabric thermal bridging assessment',
+                    '• Air tightness and draught proofing evaluation',
+                    '• Renewable energy systems (if present)',
+                    '• Energy efficiency opportunities identification'
+                ];
+                for (var i = 0; i < scope.length; i++) {
+                    doc.text(scope[i], 25, y);
+                    y += 6;
                 }
+                y += 5;
 
-                // Voice Notes Section
+                // Survey methodology
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('Methodology', 20, y);
+                y += 8;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                var method = 'The assessment was conducted using a systematic room-by-room survey approach. ' +
+                    'All accessible areas were inspected and measurements were recorded using calibrated ' +
+                    'equipment. Data collection followed the DEAP (Dwelling Energy Assessment Procedure) ' +
+                    'methodology as specified in TGD L 2022.';
+                var methodLines = doc.splitTextToSize(method, pageWidth - 40);
+                doc.text(methodLines, 20, y);
+                y += methodLines.length * 5 + 10;
+
+                // Key findings
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('Key Findings', 20, y);
+                y += 8;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                var findings = 'Detailed observations from ' + (job.voiceNotes ? job.voiceNotes.length : 0) +
+                    ' survey points have been recorded across all accessible areas of the property. ' +
+                    'Survey data includes thermal performance indicators, equipment specifications, ' +
+                    'and compliance assessment against current building regulations.';
+                var findingsLines = doc.splitTextToSize(findings, pageWidth - 40);
+                doc.text(findingsLines, 20, y);
+
+                // ========== PAGE 3+: SURVEY OBSERVATIONS ==========
+                doc.addPage();
+                y = 30;
+
+                // Page header
+                doc.setFillColor(44, 95, 45);
+                doc.rect(0, 0, pageWidth, 15, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+
+                doc.setTextColor(0, 0, 0);
+
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('SURVEY OBSERVATIONS & TECHNICAL DATA', 20, y);
+                y += 12;
+
+                // Parse and organize voice notes
                 if (job.voiceNotes && job.voiceNotes.length > 0) {
-                    y += 5;
-                    doc.setFontSize(14);
-                    doc.setFont(undefined, 'bold');
-                    doc.setTextColor(44, 95, 45);
-                    doc.text('Field Notes:', 20, y);
-                    y += 8;
-
-                    doc.setFontSize(11);
+                    doc.setFontSize(10);
                     doc.setTextColor(0, 0, 0);
                     doc.setFont(undefined, 'normal');
 
                     for (var i = 0; i < job.voiceNotes.length; i++) {
-                        // Check if we need a new page
-                        if (y > 270) {
+                        if (y > 260) {
                             doc.addPage();
-                            y = 20;
+                            // Repeat header on new pages
+                            doc.setFillColor(44, 95, 45);
+                            doc.rect(0, 0, pageWidth, 15, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                            doc.setTextColor(0, 0, 0);
+                            y = 30;
                         }
 
-                        var noteText = (i + 1) + '. ' + job.voiceNotes[i].transcription;
-                        var noteLines = doc.splitTextToSize(noteText, 170);
+                        // Observation box
+                        doc.setFillColor(248, 249, 250);
+                        var boxHeight = 20; // Estimate, will adjust
+                        doc.roundedRect(20, y - 5, pageWidth - 40, boxHeight, 2, 2, 'F');
+
+                        doc.setFont(undefined, 'bold');
+                        doc.setTextColor(44, 95, 45);
+                        doc.text('Observation ' + (i + 1) + ':', 25, y);
+                        doc.setTextColor(100, 100, 100);
+                        doc.setFontSize(8);
+                        doc.text(new Date(job.voiceNotes[i].captured_at).toLocaleString('en-IE'), pageWidth - 25, y, { align: 'right' });
+
+                        y += 7;
+                        doc.setFontSize(10);
+                        doc.setTextColor(0, 0, 0);
+                        doc.setFont(undefined, 'normal');
+
+                        var noteText = job.voiceNotes[i].transcription;
+                        var noteLines = doc.splitTextToSize(noteText, pageWidth - 50);
                         doc.text(noteLines, 25, y);
-                        y += (noteLines.length * 5) + 3;
+                        y += noteLines.length * 5 + 8;
                     }
                 }
 
-                // Manager Notes
+                // ========== COMPLIANCE SECTION ==========
+                if (y > 220) {
+                    doc.addPage();
+                    doc.setFillColor(44, 95, 45);
+                    doc.rect(0, 0, pageWidth, 15, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                    doc.setTextColor(0, 0, 0);
+                    y = 30;
+                } else {
+                    y += 10;
+                }
+
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('REGULATORY COMPLIANCE', 20, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                var compliance = 'This assessment has been conducted in accordance with:\n\n' +
+                    '• Building Regulations 1997-2023 (Part L: Conservation of Fuel and Energy)\n' +
+                    '• Technical Guidance Document L (TGD L 2022)\n' +
+                    '• Dwelling Energy Assessment Procedure (DEAP) methodology\n' +
+                    '• I.S. EN ISO 13790: Energy performance of buildings\n' +
+                    '• I.S. 399: Code of Practice for Energy Efficiency in Buildings';
+                var complianceLines = doc.splitTextToSize(compliance, pageWidth - 40);
+                doc.text(complianceLines, 20, y);
+                y += complianceLines.length * 5 + 10;
+
+                // Recommendations section
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(44, 95, 45);
+                doc.text('RECOMMENDATIONS', 20, y);
+                y += 8;
+
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                var recommendations = [
+                    '• Detailed energy performance calculations to be completed using DEAP software',
+                    '• Air tightness testing recommended to verify building envelope performance',
+                    '• Thermal imaging survey to identify thermal bridges and heat loss areas',
+                    '• Review of heating controls and thermostat settings for optimization',
+                    '• Assessment of renewable energy integration opportunities',
+                    '• Evaluation of upgrade paths to achieve higher BER ratings'
+                ];
+                for (var i = 0; i < recommendations.length; i++) {
+                    if (y > 270) {
+                        doc.addPage();
+                        doc.setFillColor(44, 95, 45);
+                        doc.rect(0, 0, pageWidth, 15, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                        doc.setTextColor(0, 0, 0);
+                        y = 30;
+                    }
+                    doc.text(recommendations[i], 25, y);
+                    y += 6;
+                }
+
+                // Manager notes if present
                 if (job.managerInputs && job.managerInputs.notes) {
+                    y += 10;
                     if (y > 250) {
                         doc.addPage();
-                        y = 20;
+                        doc.setFillColor(44, 95, 45);
+                        doc.rect(0, 0, pageWidth, 15, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                        doc.setTextColor(0, 0, 0);
+                        y = 30;
                     }
 
-                    y += 5;
-                    doc.setFontSize(14);
+                    doc.setFontSize(12);
                     doc.setFont(undefined, 'bold');
                     doc.setTextColor(44, 95, 45);
-                    doc.text('Manager Notes:', 20, y);
+                    doc.text('ADDITIONAL NOTES', 20, y);
                     y += 8;
 
-                    doc.setFontSize(11);
+                    doc.setFontSize(10);
                     doc.setTextColor(0, 0, 0);
                     doc.setFont(undefined, 'normal');
-                    var managerLines = doc.splitTextToSize(job.managerInputs.notes, 170);
+                    var managerLines = doc.splitTextToSize(job.managerInputs.notes, pageWidth - 40);
                     doc.text(managerLines, 20, y);
-                    y += (managerLines.length * 5) + 5;
                 }
 
-                // Footer
-                doc.setFontSize(9);
-                doc.setTextColor(128, 128, 128);
+                // Add footer to all pages
                 var pageCount = doc.internal.getNumberOfPages();
                 for (var i = 1; i <= pageCount; i++) {
                     doc.setPage(i);
-                    doc.text('EMG Energy Consultants | info@emgenergy.ie | 065 672 9090', 105, 285, { align: 'center' });
-                    doc.text('Page ' + i + ' of ' + pageCount, 190, 285, { align: 'right' });
+
+                    // Footer line
+                    doc.setDrawColor(44, 95, 45);
+                    doc.setLineWidth(0.5);
+                    doc.line(20, pageHeight - 20, pageWidth - 20, pageHeight - 20);
+
+                    // Footer text
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('EMG Energy Consultants | Suite 17, Block A, Clare Technology Park, Ennis, Co. Clare', pageWidth / 2, pageHeight - 15, { align: 'center' });
+                    doc.text('Tel: 065 672 9090 | Email: info@emgenergy.ie | Web: www.emgenergy.ie', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+                    doc.setFontSize(9);
+                    doc.setTextColor(44, 95, 45);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Page ' + i + ' of ' + pageCount, pageWidth - 20, pageHeight - 15, { align: 'right' });
+                    doc.text(job.projectReference, 20, pageHeight - 15);
                 }
 
                 // Save PDF
-                var fileName = job.projectReference.replace(/[^a-z0-9]/gi, '_') + '_Report.pdf';
+                var fileName = job.projectReference.replace(/[^a-z0-9]/gi, '_') + '_BER_Assessment_Report.pdf';
                 doc.save(fileName);
 
-                log('✅ PDF downloaded: ' + fileName);
-                alert('✅ PDF Downloaded!\n\nFile: ' + fileName + '\n\nCheck your Downloads folder.');
+                log('✅ Professional BER Report downloaded: ' + fileName);
+                alert('✅ Professional BER Report Downloaded!\n\n' +
+                      'File: ' + fileName + '\n\n' +
+                      'This report includes:\n' +
+                      '• Professional cover page\n' +
+                      '• Executive summary\n' +
+                      '• Survey observations\n' +
+                      '• Compliance statements\n' +
+                      '• Recommendations\n' +
+                      '• Full EMG branding\n\n' +
+                      'Check your Downloads folder.');
 
             } catch(err) {
                 log('❌ PDF Error: ' + err.message);
