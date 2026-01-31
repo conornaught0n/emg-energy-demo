@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Basic Test</title>
+</head>
+<body style="padding: 50px; font-family: Arial;">
+    <h1>BASIC TEST</h1>
+
+    <h2>Test 1: Does this page load?</h2>
+    <p style="background: yellow; padding: 20px; font-size: 20px;">
+        ✅ YES - You can see this text, so the page loaded!
+    </p>
+
+    <h2>Test 2: Does JavaScript work?</h2>
+    <button onclick="alert('JavaScript works!')" style="padding: 20px; font-size: 20px; background: green; color: white; border: none; cursor: pointer;">
+        CLICK ME - Should show alert
+    </button>
+
+    <h2>Test 3: Can we write to the page?</h2>
+    <button onclick="document.getElementById('result').innerHTML = 'SUCCESS! JavaScript can modify the page!'" style="padding: 20px; font-size: 20px; background: blue; color: white; border: none; cursor: pointer; margin-top: 20px;">
+        CLICK ME - Should show text below
+    </button>
+    <div id="result" style="background: lightgreen; padding: 20px; margin-top: 20px; font-size: 20px; min-height: 50px;"></div>
+
+    <h2>Test 4: Browser Info</h2>
+    <script>
+        document.write('<p>Browser: ' + navigator.userAgent + '</p>');
+        document.write('<p>Current URL: ' + window.location.href + '</p>');
+        document.write('<p>Time: ' + new Date().toString() + '</p>');
+    </script>
+</body>
+</html>

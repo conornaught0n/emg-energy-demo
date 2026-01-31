@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Auto Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .test { background: white; padding: 20px; margin: 10px 0; border-radius: 5px; border-left: 5px solid #ccc; }
+        .pass { border-left-color: #4CAF50; background: #e8f5e9; }
+        .fail { border-left-color: #f44336; background: #ffebee; }
+        h1 { color: #333; }
+        .big { font-size: 24px; font-weight: bold; padding: 30px; text-align: center; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 AUTO TEST - Runs When Page Loads</h1>
+    <div id="results"></div>
+
+    <script>
+        var results = document.getElementById('results');
+        var allPassed = true;
+
+        function addTest(name, passed, details) {
+            var div = document.createElement('div');
+            div.className = 'test ' + (passed ? 'pass' : 'fail');
+            div.innerHTML = '<h2>' + (passed ? '✅ ' : '❌ ') + name + '</h2><p>' + details + '</p>';
+            results.appendChild(div);
+
+            if (!passed) allPassed = false;
+
+            console.log((passed ? '✅' : '❌') + ' ' + name + ': ' + details);
+        }
+
+        // Test 1: Page loaded
+        addTest('Page Loaded', true, 'HTML page loaded successfully');
+
+        // Test 2: JavaScript running
+        addTest('JavaScript Running', true, 'This test proves JavaScript is executing');
+
+        // Test 3: Can create elements
+        try {
+            var testDiv = document.createElement('div');
+            addTest('DOM Manipulation', true, 'Can create and manipulate DOM elements');
+        } catch(e) {
+            addTest('DOM Manipulation', false, 'Error: ' + e.message);
+        }
+
+        // Test 4: localStorage available
+        try {
+            localStorage.setItem('test', 'value');
+            var val = localStorage.getItem('test');
+            if (val === 'value') {
+                addTest('localStorage', true, 'localStorage is working');
+                localStorage.removeItem('test');
+            } else {
+                addTest('localStorage', false, 'localStorage read/write failed');
+            }
+        } catch(e) {
+            addTest('localStorage', false, 'Error: ' + e.message);
+        }
+
+        // Test 5: Can save project data
+        try {
+            var testProject = {
+                id: 'test-123',
+                name: 'Test Project',
+                notes: ['Note 1', 'Note 2']
+            };
+
+            localStorage.setItem('test_project', JSON.stringify(testProject));
+            var loaded = JSON.parse(localStorage.getItem('test_project'));
+
+            if (loaded.id === 'test-123' && loaded.notes.length === 2) {
+                addTest('Save Project Data', true, 'Successfully saved and loaded project with notes');
+                localStorage.removeItem('test_project');
+            } else {
+                addTest('Save Project Data', false, 'Data corruption detected');
+            }
+        } catch(e) {
+            addTest('Save Project Data', false, 'Error: ' + e.message);
+        }
+
+        // Test 6: Click handler
+        try {
+            var testBtn = document.createElement('button');
+            testBtn.onclick = function() { return true; };
+            var result = testBtn.onclick();
+            addTest('Click Handlers', result === true, 'Button onclick handlers work');
+        } catch(e) {
+            addTest('Click Handlers', false, 'Error: ' + e.message);
+        }
+
+        // Test 7: Browser info
+        var browserInfo = 'Chrome: ' + (navigator.userAgent.indexOf('Chrome') > -1 ? 'Yes' : 'No');
+        addTest('Browser Detection', navigator.userAgent.indexOf('Chrome') > -1, browserInfo);
+
+        // Summary
+        setTimeout(function() {
+            var summary = document.createElement('div');
+            summary.className = 'big ' + (allPassed ? 'pass' : 'fail');
+            summary.style.background = allPassed ? '#4CAF50' : '#f44336';
+            summary.style.color = 'white';
+            summary.style.borderRadius = '10px';
+            summary.innerHTML = allPassed ?
+                '✅ ALL TESTS PASSED<br>Everything works!' :
+                '❌ SOME TESTS FAILED<br>See details above';
+            results.appendChild(summary);
+
+            console.log('='.repeat(50));
+            console.log(allPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED');
+            console.log('='.repeat(50));
+        }, 100);
+    </script>
+</body>
+</html>
