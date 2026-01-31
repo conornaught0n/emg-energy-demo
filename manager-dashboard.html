@@ -141,8 +141,9 @@
 
                 <div style="margin: 30px 0; color: #999;">OR</div>
 
-                <input type="text" id="manualName" placeholder="Enter your name manually" style="margin-bottom: 10px;">
-                <button class="btn-primary" onclick="manualLogin()" style="width: 100%;">Continue</button>
+                <input type="text" id="manualName" placeholder="Manager Name" style="margin-bottom: 10px;">
+                <input type="password" id="manualPassword" placeholder="Password (1234)" style="margin-bottom: 10px;">
+                <button class="btn-primary" onclick="manualLogin()" style="width: 100%;">Manager Login</button>
             </div>
         </div>
     </div>
@@ -440,22 +441,22 @@
                     </div>
                 </div>
 
-                <!-- AI Recommendations -->
+                <!-- Recommendations -->
                 <div class="detail-section">
-                    <h3>💡 AI Recommendations</h3>
+                    <h3>💡 Professional Recommendations</h3>
                     <p style="font-size: 0.9em; color: #666; margin: 5px 0 10px 0;">
-                        <strong>AI-Generated:</strong> Based on survey data, photos, and BER analysis. Edit as needed before finalizing report.
+                        <strong>Automatically generated</strong> based on survey data, photos, and BER analysis. Edit as needed before finalizing report.
                     </p>
-                    <button onclick="generateAIRecommendations()" style="margin-bottom: 10px; padding: 8px 15px; background: #2c5f2d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        🤖 Generate/Refresh AI Recommendations
-                    </button>
-                    <textarea id="edit-ai-recommendations" rows="8" placeholder="AI recommendations will appear here... Click 'Generate AI Recommendations' button above." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; line-height: 1.6;"></textarea>
+                    <textarea id="edit-ai-recommendations" rows="8" placeholder="Recommendations will auto-generate based on survey data..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; line-height: 1.6;"></textarea>
                 </div>
 
                 <!-- Manager Notes -->
                 <div class="detail-section">
                     <h3>📝 Manager Notes</h3>
                     <textarea id="edit-manager-notes" rows="4" placeholder="Add manager notes or instructions..."></textarea>
+                    <button onclick="saveManagerNotes()" style="margin-top: 10px; padding: 8px 15px; background: #2c5f2d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        💾 Save Manager Notes
+                    </button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -522,8 +523,15 @@
 
         function manualLogin() {
             var name = document.getElementById('manualName').value.trim();
+            var password = document.getElementById('manualPassword').value;
+
             if (!name) {
                 alert('❌ Please enter your name');
+                return;
+            }
+
+            if (password !== '1234') {
+                alert('❌ Incorrect Password\n\nManager access requires password 1234');
                 return;
             }
 
@@ -534,7 +542,7 @@
                 loginTime: new Date().toISOString()
             };
             localStorage.setItem('emg_user', JSON.stringify(STATE.user));
-            log('✅ Manual login: ' + STATE.user.name);
+            log('✅ Manager login: ' + STATE.user.name);
             showDashboard();
         }
 
@@ -842,19 +850,13 @@
                 doc.setFillColor(44, 95, 45);
                 doc.rect(0, 0, pageWidth, 70, 'F');
 
-                // Add EMG Energy logo image (if available)
-                try {
-                    var logoImg = 'https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png';
-                    doc.addImage(logoImg, 'PNG', pageWidth / 2 - 30, 8, 60, 20, undefined, 'FAST');
-                } catch(logoErr) {
-                    // Fallback to text logo if image fails
-                    doc.setFillColor(255, 255, 255);
-                    doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
-                    doc.setTextColor(44, 95, 45);
-                    doc.setFontSize(22);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
-                }
+                // EMG Energy logo - white box with text
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
+                doc.setTextColor(44, 95, 45);
+                doc.setFontSize(22);
+                doc.setFont(undefined, 'bold');
+                doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
 
                 // Title on cover
                 doc.setTextColor(255, 255, 255);
@@ -922,14 +924,6 @@
                 doc.text('Gort Road, Ennis, Co. Clare, Ireland', pageWidth / 2, 247, { align: 'center' });
                 doc.text('Tel: 065 672 9090 | Mobile: 087 944 4470', pageWidth / 2, 254, { align: 'center' });
                 doc.text('Email: info@emgenergy.ie | Web: www.emgenergy.ie', pageWidth / 2, 261, { align: 'center' });
-
-                // Compliance statement
-                doc.setFillColor(232, 245, 233);
-                doc.roundedRect(20, pageHeight - 35, pageWidth - 40, 20, 2, 2, 'F');
-                doc.setFontSize(8);
-                doc.setTextColor(44, 95, 45);
-                doc.text('This report has been prepared in accordance with the Technical Guidance Document L (TGD L 2022)', pageWidth / 2, pageHeight - 25, { align: 'center' });
-                doc.text('and the Building Regulations 1997-2023', pageWidth / 2, pageHeight - 20, { align: 'center' });
 
                 // ========== PAGE 2: EXECUTIVE SUMMARY ==========
                 doc.addPage();
@@ -1326,11 +1320,11 @@
                 doc.text(complianceLines, 20, y);
                 y += complianceLines.length * 5 + 10;
 
-                // AI-Enhanced Recommendations section
+                // Professional Recommendations section
                 doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
                 doc.setTextColor(44, 95, 45);
-                doc.text('💡 AI-ENHANCED RECOMMENDATIONS', 20, y);
+                doc.text('PROFESSIONAL RECOMMENDATIONS', 20, y);
                 y += 10;
 
                 doc.setFontSize(10);
@@ -1526,13 +1520,27 @@
             log('✉️ Email opened for: ' + job.projectReference);
         }
 
-        function generateAIRecommendations() {
+        function saveManagerNotes() {
             if (!STATE.currentJob) return;
 
             var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
             if (!job) return;
 
-            log('🤖 Generating AI recommendations...');
+            if (!job.managerInputs) job.managerInputs = {};
+            job.managerInputs.notes = document.getElementById('edit-manager-notes').value.trim();
+
+            save();
+            log('✅ Manager notes saved');
+            alert('✅ Manager Notes Saved!');
+        }
+
+        function generateAIRecommendations(silent) {
+            if (!STATE.currentJob) return;
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
+            if (!job) return;
+
+            if (!silent) log('🤖 Generating recommendations...');
 
             var recommendations = [];
             var aiAnalysis = null;
@@ -1669,8 +1677,10 @@
             if (!job.managerInputs) job.managerInputs = {};
             job.managerInputs.recommendations = fullRecommendations;
 
-            log('✅ AI recommendations generated');
-            alert('✅ AI Recommendations Generated!\n\nBased on:\n• Survey completion: ' + (aiAnalysis ? aiAnalysis.completionPercentage + '%' : 'N/A') + '\n• Voice notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n• Photos with OCR: ' + (job.photos ? job.photos.length : 0) + '\n\nReview and edit the recommendations as needed.');
+            if (!silent) {
+                log('✅ Recommendations generated');
+                alert('✅ Recommendations Generated!\n\nBased on:\n• Survey completion: ' + (aiAnalysis ? aiAnalysis.completionPercentage + '%' : 'N/A') + '\n• Voice notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n• Photos with OCR: ' + (job.photos ? job.photos.length : 0) + '\n\nReview and edit as needed.');
+            }
         }
 
         function approveAndFinalizeReport() {
@@ -1773,7 +1783,15 @@
             document.getElementById('edit-created').textContent = new Date(job.createdAt).toLocaleString();
             document.getElementById('edit-createdby').textContent = job.createdBy || 'Field Operator';
             document.getElementById('edit-manager-notes').value = (job.managerInputs && job.managerInputs.notes) || '';
-            document.getElementById('edit-ai-recommendations').value = (job.managerInputs && job.managerInputs.recommendations) || '';
+
+            // Auto-generate recommendations if they don't exist
+            if (!job.managerInputs || !job.managerInputs.recommendations) {
+                setTimeout(function() {
+                    generateAIRecommendations(true); // Pass true for silent mode
+                }, 500);
+            } else {
+                document.getElementById('edit-ai-recommendations').value = job.managerInputs.recommendations;
+            }
 
             // Populate staff dropdown
             var staffSel = document.getElementById('edit-staff');
