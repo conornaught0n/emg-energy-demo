@@ -1,0 +1,16 @@
+{
+  "name": "emg-energy-backend",
+  "version": "1.0.0",
+  "description": "EMG Energy Backend Storage and Sync Server",
+  "main": "sync-server.js",
+  "scripts": {
+    "start": "node sync-server.js",
+    "test": "node test-workflow.js",
+    "stats": "node storage-manager.js stats",
+    "list": "node storage-manager.js list",
+    "export": "node storage-manager.js export"
+  },
+  "keywords": ["emg", "energy", "building", "assessment"],
+  "author": "EMG Energy Consultants",
+  "license": "MIT"
+}

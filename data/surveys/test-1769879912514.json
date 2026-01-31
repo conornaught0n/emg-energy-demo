@@ -1,0 +1,122 @@
+{
+  "jobId": "test-1769879912514",
+  "projectReference": "EMG-2026-TEST01",
+  "address": "123 Oak Avenue, Ennis, Co. Clare",
+  "createdAt": "2026-01-29T10:00:00Z",
+  "status": "completed",
+  "voiceNotes": [
+    {
+      "id": "vn1",
+      "transcription": "Property assessment beginning at 123 Oak Avenue. Two storey detached house approximately 165 square meters. Building appears to be well maintained with modern construction standards.",
+      "captured_at": "2026-01-29T10:15:00Z",
+      "confidence": 0.96,
+      "duration_seconds": 18
+    },
+    {
+      "id": "vn2",
+      "transcription": "Blower door test setup complete. Testing at 50 Pascals pressure differential. Weather conditions are good with minimal wind. Temperature 12 degrees Celsius.",
+      "captured_at": "2026-01-29T10:45:00Z",
+      "confidence": 0.94,
+      "duration_seconds": 22
+    },
+    {
+      "id": "vn3",
+      "transcription": "Air permeability test complete. Reading shows 3.8 cubic meters per hour per square meter at 50 Pascals. This is well within Part L requirements of maximum 5.0.",
+      "captured_at": "2026-01-29T11:20:00Z",
+      "confidence": 0.97,
+      "duration_seconds": 25
+    },
+    {
+      "id": "vn4",
+      "transcription": "Wall U-value measurements taken using thermal camera. Front wall measures 0.27, side walls 0.29, rear wall 0.28 watts per square meter kelvin. All walls meeting Part L standards.",
+      "captured_at": "2026-01-29T11:55:00Z",
+      "confidence": 0.93,
+      "duration_seconds": 28
+    },
+    {
+      "id": "vn5",
+      "transcription": "Roof insulation inspection complete. Insulation depth measured at 350 millimeters of mineral wool. U-value calculated at 0.16 watts per square meter kelvin. Excellent thermal performance.",
+      "captured_at": "2026-01-29T12:30:00Z",
+      "confidence": 0.95,
+      "duration_seconds": 24
+    }
+  ],
+  "photos": [
+    {
+      "id": "p1",
+      "photo_type": "equipment",
+      "description": "Blower door manometer reading",
+      "captured_at": "2026-01-29T11:20:00Z"
+    },
+    {
+      "id": "p2",
+      "photo_type": "clipboard",
+      "description": "Test results data sheet",
+      "captured_at": "2026-01-29T11:25:00Z"
+    },
+    {
+      "id": "p3",
+      "photo_type": "equipment",
+      "description": "Thermal camera wall scan",
+      "captured_at": "2026-01-29T11:55:00Z"
+    },
+    {
+      "id": "p4",
+      "photo_type": "site",
+      "description": "Property front elevation",
+      "captured_at": "2026-01-29T10:10:00Z"
+    }
+  ],
+  "testResults": [
+    {
+      "parameter": "Air Leakage Rate",
+      "location": "Building Envelope",
+      "value": 3.8,
+      "unit": "m³/h/m²",
+      "status": "PASS",
+      "standard": "TGD L 2022 - Max 5.0 m³/h/m²"
+    },
+    {
+      "parameter": "Wall Thermal Transmittance",
+      "location": "Front Wall",
+      "value": 0.27,
+      "unit": "W/m²K",
+      "status": "PASS",
+      "standard": "TGD L 2022 - Max 0.32 W/m²K"
+    },
+    {
+      "parameter": "Wall Thermal Transmittance",
+      "location": "Side Walls",
+      "value": 0.29,
+      "unit": "W/m²K",
+      "status": "PASS",
+      "standard": "TGD L 2022 - Max 0.32 W/m²K"
+    },
+    {
+      "parameter": "Roof Thermal Transmittance",
+      "location": "Roof",
+      "value": 0.16,
+      "unit": "W/m²K",
+      "status": "PASS",
+      "standard": "TGD L 2022 - Max 0.20 W/m²K"
+    },
+    {
+      "parameter": "Window Thermal Transmittance",
+      "location": "Windows",
+      "value": 1.5,
+      "unit": "W/m²K",
+      "status": "PASS",
+      "standard": "TGD L 2022 - Max 1.6 W/m²K"
+    }
+  ],
+  "managerInputs": {
+    "notes": "Updated notes: Comprehensive assessment completed successfully.",
+    "customRecommendations": "Property achieves full compliance. No immediate remedial works required. Recommend continued maintenance of seals around windows and doors. Consider periodic re-testing in 5-10 years to verify continued performance.",
+    "floorArea": "165",
+    "yearBuilt": "2018",
+    "berRating": "B2",
+    "propertyType": "Detached House"
+  },
+  "lastModified": "2026-01-31T17:18:32.515Z",
+  "version": 1
+}
