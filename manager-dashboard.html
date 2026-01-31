@@ -409,9 +409,25 @@
                 <!-- Voice Notes -->
                 <div class="detail-section">
                     <h3>🎤 Voice Notes (<span id="notes-count">0</span>)</h3>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0;">Raw survey transcriptions (edit if needed):</p>
                     <div id="modal-notes"></div>
                     <div style="text-align: center; color: #999; padding: 20px;" id="no-notes" style="display: none;">
                         No voice notes recorded
+                    </div>
+                </div>
+
+                <!-- AI-Generated Professional Text -->
+                <div class="detail-section">
+                    <h3>🤖 AI-Generated Professional Report Text</h3>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0 15px 0;">
+                        <strong>Review and edit:</strong> This is the professional BER assessment text that will appear in the final PDF report.
+                        The AI has transformed the voice notes above into professional technical language. Edit as needed before approval.
+                    </p>
+                    <div id="ai-professional-text-container" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Will be populated with AI-generated professional text -->
+                    </div>
+                    <div style="text-align: center; color: #999; padding: 20px;" id="no-ai-text">
+                        No voice notes to process
                     </div>
                 </div>
 
@@ -433,8 +449,9 @@
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="generateJobPDF(STATE.currentJob.jobId)">📄 Download PDF</button>
                 <button class="btn-secondary" onclick="printJobPDF(STATE.currentJob.jobId)">🖨️ Print</button>
-                <button class="btn-secondary" onclick="emailJob(STATE.currentJob.jobId)">✉️ Email</button>
+                <button class="btn-secondary" onclick="emailJob(STATE.currentJob.jobId)">✉️ Email Manager</button>
                 <button class="btn-success" onclick="saveJobChanges()">💾 Save Changes</button>
+                <button class="btn-success" onclick="approveAndFinalizeReport()" style="background: #2c5f2d;">✅ Approve & Finalize Report</button>
                 <button class="btn-warning" onclick="closeJobModal()">Cancel</button>
                 <button class="btn-danger" onclick="deleteJobFromModal()">🗑️ Delete</button>
             </div>
@@ -809,38 +826,42 @@
                 var pageHeight = doc.internal.pageSize.getHeight();
 
                 // ========== COVER PAGE ==========
-                // Green header box
+                // Green header box with logo
                 doc.setFillColor(44, 95, 45);
-                doc.rect(0, 0, pageWidth, 60, 'F');
+                doc.rect(0, 0, pageWidth, 70, 'F');
 
-                // EMG ENERGY Logo Text (top of header)
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(18);
+                // EMG ENERGY Logo Box (prominent logo)
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
+
+                doc.setTextColor(44, 95, 45);
+                doc.setFontSize(22);
                 doc.setFont(undefined, 'bold');
-                doc.text('EMG ENERGY', pageWidth / 2, 15, { align: 'center' });
+                doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
 
                 // Title on cover
-                doc.setFontSize(24);
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(26);
                 doc.setFont(undefined, 'bold');
-                doc.text('BUILDING ENERGY', pageWidth / 2, 30, { align: 'center' });
-                doc.text('ASSESSMENT REPORT', pageWidth / 2, 40, { align: 'center' });
+                doc.text('BUILDING ENERGY', pageWidth / 2, 42, { align: 'center' });
+                doc.text('ASSESSMENT REPORT', pageWidth / 2, 52, { align: 'center' });
 
-                doc.setFontSize(12);
+                doc.setFontSize(11);
                 doc.setFont(undefined, 'normal');
-                doc.text('Irish Building Regulations Part L Compliance Survey', pageWidth / 2, 50, { align: 'center' });
+                doc.text('Irish Building Regulations Part L Compliance Survey', pageWidth / 2, 62, { align: 'center' });
 
                 // Property details box
                 doc.setTextColor(0, 0, 0);
                 doc.setFillColor(248, 249, 250);
-                doc.roundedRect(20, 80, pageWidth - 40, 50, 3, 3, 'F');
+                doc.roundedRect(20, 85, pageWidth - 40, 50, 3, 3, 'F');
 
                 doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
-                doc.text('Property Address:', 30, 95);
+                doc.text('Property Address:', 30, 100);
                 doc.setFont(undefined, 'normal');
                 doc.setFontSize(12);
                 var addressLines = doc.splitTextToSize(job.address, pageWidth - 60);
-                doc.text(addressLines, 30, 105);
+                doc.text(addressLines, 30, 110);
 
                 // Report details
                 var detailY = 150;
@@ -1042,8 +1063,16 @@
                         doc.setTextColor(0, 0, 0);
                         doc.setFont(undefined, 'normal');
 
-                        var noteText = job.voiceNotes[i].transcription;
-                        var noteLines = doc.splitTextToSize(noteText, pageWidth - 50);
+                        // Use manager-approved professional text if available, otherwise AI-generate
+                        var professionalText = '';
+                        if (job.managerInputs && job.managerInputs.professionalTexts && job.managerInputs.professionalTexts[job.voiceNotes[i].id]) {
+                            // Manager has reviewed and approved this text
+                            professionalText = job.managerInputs.professionalTexts[job.voiceNotes[i].id];
+                        } else {
+                            // AI-process voice note into professional BER assessment text
+                            professionalText = AI_PROCESSOR.professionalize(job.voiceNotes[i].transcription);
+                        }
+                        var noteLines = doc.splitTextToSize(professionalText, pageWidth - 50);
                         doc.text(noteLines, 25, y);
                         y += noteLines.length * 5 + 8;
                     }
@@ -1475,16 +1504,89 @@
             log('✉️ Email opened for: ' + job.projectReference);
         }
 
+        function approveAndFinalizeReport() {
+            if (!STATE.currentJob) return;
+
+            // Save all changes first
+            saveJobChanges();
+
+            // Mark as completed
+            var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
+            if (job) {
+                job.status = 'completed';
+                if (!job.managerInputs) job.managerInputs = {};
+                job.managerInputs.approvedAt = new Date().toISOString();
+                job.managerInputs.approvedBy = STATE.loggedInUser;
+                save();
+                renderJobs();
+            }
+
+            // Generate PDF
+            generateJobPDF(STATE.currentJob.jobId);
+
+            // Send email notification
+            setTimeout(function() {
+                emailJob(STATE.currentJob.jobId);
+            }, 1000);
+
+            log('✅ Report approved and finalized: ' + STATE.currentJob.projectReference);
+            alert('✅ Report Approved!\n\nThe report has been:\n• Saved with your edits\n• Marked as Completed\n• PDF generated and downloaded\n• Email notification prepared\n\nPlease check your Downloads folder for the PDF.');
+
+            closeJobModal();
+        }
+
         function emailJob(jobId) {
             var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
             if (!job) return;
 
-            var recipient = prompt('Enter recipient email address:');
-            if (!recipient) return;
+            // Automatic email to manager (gaeilge@gmail.com)
+            var recipient = 'gaeilge@gmail.com';
+            var subject = 'EMG Energy BER Assessment Report - ' + job.projectReference;
 
-            var subject = 'EMG Energy Report - ' + job.projectReference;
-            var body = 'Project: ' + job.projectReference + '\nAddress: ' + job.address;
+            // Build professional email body
+            var body = 'Dear Manager,\n\n';
+            body += 'The Building Energy Assessment Report for the following project is ready for your review:\n\n';
+            body += '═══════════════════════════════════════\n';
+            body += 'PROJECT DETAILS\n';
+            body += '═══════════════════════════════════════\n';
+            body += 'Reference: ' + job.projectReference + '\n';
+            body += 'Address: ' + job.address + '\n';
+            body += 'Status: ' + job.status.toUpperCase().replace('-', ' ') + '\n';
+            body += 'Assessor: ' + (job.assignedTo || 'EMG Energy Surveyor') + '\n';
+            body += 'Survey Date: ' + new Date(job.createdAt).toLocaleDateString('en-IE') + '\n\n';
+
+            // Add completion status if available
+            if (job.jobTypeId && job.checkedItems) {
+                var aiAnalysis = AI_PROCESSOR.analyzeProject(job);
+                body += 'Survey Completion: ' + aiAnalysis.completionPercentage + '%\n';
+                body += 'Voice Notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n';
+                body += 'Photos: ' + (job.photos ? job.photos.length : 0) + '\n\n';
+            }
+
+            body += '═══════════════════════════════════════\n';
+            body += 'NEXT STEPS\n';
+            body += '═══════════════════════════════════════\n';
+            body += '1. Review the AI-generated professional report text in the dashboard\n';
+            body += '2. Edit any observations as needed\n';
+            body += '3. Click "Download PDF" to generate the final report\n';
+            body += '4. Forward the report to the client\n\n';
+
+            body += 'Access the dashboard here: ' + window.location.href + '\n\n';
+            body += 'Best regards,\n';
+            body += 'EMG Energy Survey System\n\n';
+            body += '─────────────────────────────────────\n';
+            body += 'EMG Energy Consultants\n';
+            body += 'Suite 17, Block A, Clare Technology Park\n';
+            body += 'Ennis, Co. Clare, Ireland\n';
+            body += 'Tel: 065 672 9090 | Mobile: 087 944 4470\n';
+            body += 'Email: info@emgenergy.ie\n';
+            body += 'Web: www.emgenergy.ie';
+
+            // Open email client
             window.location.href = 'mailto:' + recipient + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+
+            log('✉️ Email notification sent to: ' + recipient);
+            alert('📧 Email Notification\n\nOpening email to: ' + recipient + '\n\nProject: ' + job.projectReference + '\n\nYour default email client will open with a pre-filled message. Click Send to complete.');
         }
 
         // ============= JOB DETAILS MODAL =============
@@ -1537,6 +1639,37 @@
             }
             document.getElementById('modal-notes').innerHTML = notesHtml;
 
+            // Generate AI Professional Text for manager review
+            var aiTextHtml = '';
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                document.getElementById('no-ai-text').style.display = 'none';
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    var note = job.voiceNotes[i];
+
+                    // Check if manager has already edited this professional text
+                    var professionalText = '';
+                    if (job.managerInputs && job.managerInputs.professionalTexts && job.managerInputs.professionalTexts[note.id]) {
+                        // Use manager's edited version
+                        professionalText = job.managerInputs.professionalTexts[note.id];
+                    } else {
+                        // Generate AI professional text from raw transcription
+                        professionalText = AI_PROCESSOR.professionalize(note.transcription);
+                    }
+
+                    aiTextHtml += '<div style="background: #f8f9fa; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid #2c5f2d;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' +
+                            '<span style="font-weight: 600; color: #2c5f2d;">Observation ' + (i+1) + '</span>' +
+                            '<span style="font-size: 0.85em; color: #666;">' + new Date(note.captured_at).toLocaleString() + '</span>' +
+                        '</div>' +
+                        '<textarea data-ai-note-id="' + note.id + '" rows="8" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.95em; line-height: 1.6;">' +
+                        professionalText + '</textarea>' +
+                    '</div>';
+                }
+            } else {
+                document.getElementById('no-ai-text').style.display = 'block';
+            }
+            document.getElementById('ai-professional-text-container').innerHTML = aiTextHtml;
+
             // Display photos
             var photosHtml = '';
             if (job.photos && job.photos.length > 0) {
@@ -1587,6 +1720,17 @@
                 var newText = noteInputs[i].value.trim();
                 var note = job.voiceNotes.find(function(n) { return n.id === noteId; });
                 if (note) note.transcription = newText;
+            }
+
+            // Save manager-edited AI professional texts
+            if (!job.managerInputs.professionalTexts) {
+                job.managerInputs.professionalTexts = {};
+            }
+            var aiTextInputs = document.querySelectorAll('textarea[data-ai-note-id]');
+            for (var i = 0; i < aiTextInputs.length; i++) {
+                var noteId = aiTextInputs[i].getAttribute('data-ai-note-id');
+                var editedText = aiTextInputs[i].value.trim();
+                job.managerInputs.professionalTexts[noteId] = editedText;
             }
 
             // Save to localStorage
