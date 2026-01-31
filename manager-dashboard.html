@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>EMG Energy - Manager Dashboard v1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="job-types-config.js"></script>
+    <script src="ai-processor.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial; background: #f5f7fa; }
@@ -188,6 +190,7 @@
                 <button class="tab active" onclick="switchTab('overview')">📊 Overview</button>
                 <button class="tab" onclick="switchTab('jobs')">📋 All Jobs</button>
                 <button class="tab" onclick="switchTab('create')">➕ Create Job</button>
+                <button class="tab" onclick="switchTab('jobtypes')">🔧 Job Types</button>
                 <button class="tab" onclick="switchTab('reports')">📄 Reports</button>
                 <button class="tab" onclick="switchTab('analytics')">📈 Analytics</button>
             </div>
@@ -267,6 +270,34 @@
 
                         <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 18px;">Create Job</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- TAB: JOB TYPES -->
+            <div id="tab-jobtypes" class="tab-content">
+                <div class="card">
+                    <div class="card-title">🔧 Survey Job Types & Checklists</div>
+                    <p style="color: #666; margin-bottom: 20px;">Manage survey types and their required checklist items. AI will automatically track completion as surveyors record notes.</p>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;" id="jobTypesGrid">
+                        <!-- Job types will be loaded here -->
+                    </div>
+
+                    <div style="margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                        <h3 style="color: #2C5F2D; margin-bottom: 10px;">🤖 AI-Powered Checklist Tracking</h3>
+                        <p style="color: #666; margin-bottom: 10px;"><strong>How it works:</strong></p>
+                        <ul style="color: #666; margin-left: 20px;">
+                            <li>Surveyor selects job type when creating project</li>
+                            <li>As they record voice notes, AI analyzes content</li>
+                            <li>Checklist items are automatically marked complete</li>
+                            <li>Missing items are highlighted for surveyor</li>
+                            <li>Final report includes completion status and recommendations</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="showAddJobTypeModal()">➕ Create New Job Type</button>
+                    </div>
                 </div>
             </div>
 
