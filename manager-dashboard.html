@@ -1502,35 +1502,6 @@
             alert('📄 Print Function\n\nThe Print button now generates the same professional PDF.\n\nYour PDF will download - then use your browser\'s print function (Ctrl+P) to print it.');
             generateJobPDF(jobId);
         }
-            if (job.assignedTo) {
-                printWindow.document.write('<div class="info"><span class="label">Field Officer:</span> ' + job.assignedTo + '</div>');
-            }
-
-            if (job.voiceNotes && job.voiceNotes.length > 0) {
-                printWindow.document.write('<h2>Field Notes</h2>');
-                for (var i = 0; i < job.voiceNotes.length; i++) {
-                    printWindow.document.write('<div class="note">' + (i+1) + '. ' + job.voiceNotes[i].transcription + '</div>');
-                }
-            }
-
-            if (job.managerInputs && job.managerInputs.notes) {
-                printWindow.document.write('<h2>Manager Notes</h2>');
-                printWindow.document.write('<div>' + job.managerInputs.notes + '</div>');
-            }
-
-            printWindow.document.write('<hr style="margin-top: 50px;">');
-            printWindow.document.write('<p style="text-align: center; color: #666; font-size: 12px;">EMG Energy Consultants | info@emgenergy.ie | 065 672 9090</p>');
-            printWindow.document.write('</body></html>');
-
-            printWindow.document.close();
-            printWindow.focus();
-
-            setTimeout(function() {
-                printWindow.print();
-            }, 500);
-
-            log('🖨️ Print dialog opened for: ' + job.projectReference);
-        }
 
         function sendEmail() {
             var jobId = document.getElementById('reportProject').value;
