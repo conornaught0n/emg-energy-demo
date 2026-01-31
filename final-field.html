@@ -554,6 +554,8 @@
             };
 
             var identified = [];
+            var recommendations = [];
+
             for (var category in keywords) {
                 for (var i = 0; i < keywords[category].length; i++) {
                     if (processed.toLowerCase().indexOf(keywords[category][i]) !== -1) {
@@ -563,11 +565,54 @@
                 }
             }
 
-            if (identified.length > 0) {
-                processed = 'Equipment data detected: ' + identified.join(', ') + '. ' + processed;
+            // Generate AI recommendations based on detected equipment
+            var lowerText = processed.toLowerCase();
+
+            if (identified.indexOf('boiler') !== -1) {
+                recommendations.push('AI Recommendation: Document boiler specifications (make, model, kW output, age) for DEAP assessment. Verify SEDBUK rating and service history.');
+
+                // Check for old boiler indicators
+                if (lowerText.match(/\d{4}/) && parseInt(lowerText.match(/\d{4}/)[0]) < 2010) {
+                    recommendations.push('AI Alert: Boiler appears to be pre-2010. Consider efficiency assessment and potential replacement recommendation.');
+                }
             }
 
-            return processed;
+            if (identified.indexOf('temperature') !== -1) {
+                var tempMatch = lowerText.match(/(\d+)\s*°?c/);
+                if (tempMatch) {
+                    var temp = parseInt(tempMatch[1]);
+                    if (temp < 18) {
+                        recommendations.push('AI Recommendation: Temperature (' + temp + '°C) below TGD L comfort standards (21°C living areas). Investigate heating system performance and building fabric thermal loss.');
+                    } else if (temp > 23) {
+                        recommendations.push('AI Recommendation: Temperature (' + temp + '°C) above typical comfort range. May indicate overheating risk - check solar gain, ventilation, and thermostat settings.');
+                    }
+                }
+            }
+
+            if (identified.indexOf('insulation') !== -1) {
+                var mmMatch = lowerText.match(/(\d+)\s*mm/);
+                if (mmMatch) {
+                    var depth = parseInt(mmMatch[1]);
+                    if (depth < 100) {
+                        recommendations.push('AI Recommendation: Insulation depth (' + depth + 'mm) critically below Part L standards (300mm required). Priority upgrade to achieve U-value ≤0.16 W/m²K.');
+                    } else if (depth < 200) {
+                        recommendations.push('AI Recommendation: Insulation depth (' + depth + 'mm) below current standards. Recommend top-up to 300mm for Part L compliance and optimal thermal performance.');
+                    }
+                }
+            }
+
+            if (identified.indexOf('serial') !== -1 || identified.indexOf('efficiency') !== -1) {
+                recommendations.push('AI Recommendation: Equipment serial number/rating captured. Cross-reference with manufacturer database for detailed specifications and efficiency data.');
+            }
+
+            // Build final processed text with recommendations
+            var finalText = 'Equipment data detected: ' + identified.join(', ') + '. ' + processed;
+
+            if (recommendations.length > 0) {
+                finalText += '\n\n📊 AI ANALYSIS:\n' + recommendations.join('\n');
+            }
+
+            return finalText;
         }
 
         function displayPhotos() {

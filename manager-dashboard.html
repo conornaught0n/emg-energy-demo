@@ -440,6 +440,18 @@
                     </div>
                 </div>
 
+                <!-- AI Recommendations -->
+                <div class="detail-section">
+                    <h3>💡 AI Recommendations</h3>
+                    <p style="font-size: 0.9em; color: #666; margin: 5px 0 10px 0;">
+                        <strong>AI-Generated:</strong> Based on survey data, photos, and BER analysis. Edit as needed before finalizing report.
+                    </p>
+                    <button onclick="generateAIRecommendations()" style="margin-bottom: 10px; padding: 8px 15px; background: #2c5f2d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        🤖 Generate/Refresh AI Recommendations
+                    </button>
+                    <textarea id="edit-ai-recommendations" rows="8" placeholder="AI recommendations will appear here... Click 'Generate AI Recommendations' button above." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; line-height: 1.6;"></textarea>
+                </div>
+
                 <!-- Manager Notes -->
                 <div class="detail-section">
                     <h3>📝 Manager Notes</h3>
@@ -830,14 +842,19 @@
                 doc.setFillColor(44, 95, 45);
                 doc.rect(0, 0, pageWidth, 70, 'F');
 
-                // EMG ENERGY Logo Box (prominent logo)
-                doc.setFillColor(255, 255, 255);
-                doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
-
-                doc.setTextColor(44, 95, 45);
-                doc.setFontSize(22);
-                doc.setFont(undefined, 'bold');
-                doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
+                // Add EMG Energy logo image (if available)
+                try {
+                    var logoImg = 'https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png';
+                    doc.addImage(logoImg, 'PNG', pageWidth / 2 - 30, 8, 60, 20, undefined, 'FAST');
+                } catch(logoErr) {
+                    // Fallback to text logo if image fails
+                    doc.setFillColor(255, 255, 255);
+                    doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
+                    doc.setTextColor(44, 95, 45);
+                    doc.setFontSize(22);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
+                }
 
                 // Title on cover
                 doc.setTextColor(255, 255, 255);
@@ -1309,38 +1326,87 @@
                 doc.text(complianceLines, 20, y);
                 y += complianceLines.length * 5 + 10;
 
-                // Recommendations section
-                doc.setFontSize(12);
+                // AI-Enhanced Recommendations section
+                doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
                 doc.setTextColor(44, 95, 45);
-                doc.text('RECOMMENDATIONS', 20, y);
-                y += 8;
+                doc.text('💡 AI-ENHANCED RECOMMENDATIONS', 20, y);
+                y += 10;
 
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                var recommendations = [
-                    '• Detailed energy performance calculations to be completed using DEAP software',
-                    '• Air tightness testing recommended to verify building envelope performance',
-                    '• Thermal imaging survey to identify thermal bridges and heat loss areas',
-                    '• Review of heating controls and thermostat settings for optimization',
-                    '• Assessment of renewable energy integration opportunities',
-                    '• Evaluation of upgrade paths to achieve higher BER ratings'
-                ];
-                for (var i = 0; i < recommendations.length; i++) {
-                    if (y > 270) {
-                        doc.addPage();
-                        doc.setFillColor(44, 95, 45);
-                        doc.rect(0, 0, pageWidth, 15, 'F');
-                        doc.setTextColor(255, 255, 255);
-                        doc.setFontSize(10);
-                        doc.setFont(undefined, 'bold');
-                        doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
-                        doc.setTextColor(0, 0, 0);
-                        y = 30;
+
+                // Use AI-generated recommendations if available, otherwise use default
+                if (job.managerInputs && job.managerInputs.recommendations) {
+                    var aiRecommendations = job.managerInputs.recommendations;
+                    var recLines = aiRecommendations.split('\n');
+
+                    for (var i = 0; i < recLines.length; i++) {
+                        if (y > 270) {
+                            doc.addPage();
+                            doc.setFillColor(44, 95, 45);
+                            doc.rect(0, 0, pageWidth, 15, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                            doc.setTextColor(0, 0, 0);
+                            y = 30;
+                        }
+
+                        var line = recLines[i];
+
+                        // Format section headers (lines with = or all caps)
+                        if (line.indexOf('═══') !== -1) {
+                            continue; // Skip separator lines
+                        } else if (line === line.toUpperCase() && line.trim().length > 0 && line.trim().length < 50) {
+                            // Section header
+                            y += 3;
+                            doc.setFont(undefined, 'bold');
+                            doc.setTextColor(44, 95, 45);
+                            doc.setFontSize(11);
+                            var headerLines = doc.splitTextToSize(line, pageWidth - 40);
+                            doc.text(headerLines, 20, y);
+                            y += headerLines.length * 5 + 3;
+                            doc.setFont(undefined, 'normal');
+                            doc.setTextColor(0, 0, 0);
+                            doc.setFontSize(10);
+                        } else if (line.trim().length > 0) {
+                            // Regular line
+                            var textLines = doc.splitTextToSize(line, pageWidth - 45);
+                            doc.text(textLines, 25, y);
+                            y += textLines.length * 5;
+                        } else {
+                            // Empty line
+                            y += 3;
+                        }
                     }
-                    doc.text(recommendations[i], 25, y);
-                    y += 6;
+                } else {
+                    // Default recommendations if no AI recommendations
+                    var recommendations = [
+                        '• Detailed energy performance calculations to be completed using DEAP software',
+                        '• Air tightness testing recommended to verify building envelope performance',
+                        '• Thermal imaging survey to identify thermal bridges and heat loss areas',
+                        '• Review of heating controls and thermostat settings for optimization',
+                        '• Assessment of renewable energy integration opportunities',
+                        '• Evaluation of upgrade paths to achieve higher BER ratings'
+                    ];
+                    for (var i = 0; i < recommendations.length; i++) {
+                        if (y > 270) {
+                            doc.addPage();
+                            doc.setFillColor(44, 95, 45);
+                            doc.rect(0, 0, pageWidth, 15, 'F');
+                            doc.setTextColor(255, 255, 255);
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('BUILDING ENERGY ASSESSMENT REPORT', pageWidth / 2, 10, { align: 'center' });
+                            doc.setTextColor(0, 0, 0);
+                            y = 30;
+                        }
+                        doc.text(recommendations[i], 25, y);
+                        y += 6;
+                    }
                 }
 
                 // Manager notes if present
@@ -1431,26 +1497,11 @@
         }
 
         function printJobPDF(jobId) {
-            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
-            if (!job) return;
-
-            // Open print dialog for the job
-            var printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>' + job.projectReference + ' - Print</title>');
-            printWindow.document.write('<style>');
-            printWindow.document.write('body { font-family: Arial; padding: 40px; }');
-            printWindow.document.write('h1 { color: #2C5F2D; }');
-            printWindow.document.write('h2 { color: #2C5F2D; margin-top: 30px; }');
-            printWindow.document.write('.info { margin: 10px 0; }');
-            printWindow.document.write('.label { font-weight: bold; display: inline-block; width: 150px; }');
-            printWindow.document.write('.note { margin: 10px 0; padding-left: 20px; }');
-            printWindow.document.write('</style></head><body>');
-
-            printWindow.document.write('<h1>EMG Energy Assessment Report</h1>');
-            printWindow.document.write('<div class="info"><span class="label">Project Reference:</span> ' + job.projectReference + '</div>');
-            printWindow.document.write('<div class="info"><span class="label">Address:</span> ' + job.address + '</div>');
-            printWindow.document.write('<div class="info"><span class="label">Date:</span> ' + new Date(job.createdAt).toLocaleDateString() + '</div>');
-            printWindow.document.write('<div class="info"><span class="label">Status:</span> ' + job.status.toUpperCase() + '</div>');
+            // Print now uses same PDF as download - just opens print dialog instead
+            log('🖨️ Opening PDF for printing...');
+            alert('📄 Print Function\n\nThe Print button now generates the same professional PDF.\n\nYour PDF will download - then use your browser\'s print function (Ctrl+P) to print it.');
+            generateJobPDF(jobId);
+        }
             if (job.assignedTo) {
                 printWindow.document.write('<div class="info"><span class="label">Field Officer:</span> ' + job.assignedTo + '</div>');
             }
@@ -1502,6 +1553,152 @@
 
             window.location.href = 'mailto:' + recipient + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
             log('✉️ Email opened for: ' + job.projectReference);
+        }
+
+        function generateAIRecommendations() {
+            if (!STATE.currentJob) return;
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
+            if (!job) return;
+
+            log('🤖 Generating AI recommendations...');
+
+            var recommendations = [];
+
+            // Analyze survey completion
+            if (job.jobTypeId && job.checkedItems) {
+                var aiAnalysis = AI_PROCESSOR.analyzeProject(job);
+
+                recommendations.push('SURVEY COMPLETION ANALYSIS');
+                recommendations.push('═══════════════════════════════');
+                recommendations.push('Overall completion: ' + aiAnalysis.completionPercentage + '%');
+                recommendations.push('');
+
+                if (aiAnalysis.completionPercentage < 70) {
+                    recommendations.push('⚠️ PRIORITY: Survey incomplete. Address outstanding items before final submission.');
+                    recommendations.push('');
+                }
+            }
+
+            // Analyze voice notes and professional text for common issues
+            recommendations.push('TECHNICAL RECOMMENDATIONS');
+            recommendations.push('═══════════════════════════════');
+
+            var allText = '';
+            if (job.voiceNotes) {
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    allText += ' ' + job.voiceNotes[i].transcription.toLowerCase();
+                }
+            }
+
+            // Building fabric recommendations
+            if (allText.indexOf('solid brick') !== -1 || allText.indexOf('solid wall') !== -1) {
+                recommendations.push('• WALL INSULATION: Solid wall construction identified. Recommend external or internal wall insulation to achieve U-value ≤0.21 W/m²K (Part L compliance). Estimated energy savings: 25-35% on heating costs.');
+            }
+            if (allText.indexOf('cavity') !== -1 && allText.indexOf('insulation') === -1) {
+                recommendations.push('• CAVITY WALL: Cavity wall appears uninsulated. Recommend cavity wall insulation (100-150mm mineral wool or blown bead). Cost-effective upgrade, typical ROI: 3-5 years.');
+            }
+
+            // Glazing recommendations
+            if (allText.indexOf('single glaz') !== -1) {
+                recommendations.push('• WINDOWS: Single glazing identified. CRITICAL upgrade required for Part L compliance. Recommend A-rated double/triple glazing (U-value ≤1.4 W/m²K). Energy savings: 15-25% on heating.');
+            }
+
+            // Heating system recommendations
+            if (allText.indexOf('boiler') !== -1) {
+                if (allText.match(/\d+\s*year/) && allText.match(/(\d+)\s*year/)) {
+                    var age = parseInt(allText.match(/(\d+)\s*year/)[1]);
+                    if (age > 15) {
+                        recommendations.push('• BOILER REPLACEMENT: Unit over 15 years old. Recommend replacement with A-rated condensing boiler (SEDBUK 90%+). Estimated savings: 25-30% on heating costs, improved reliability.');
+                    }
+                }
+                if (allText.indexOf('condensing') === -1 && allText.indexOf('combi') === -1) {
+                    recommendations.push('• HEATING UPGRADE: Consider upgrading to modern condensing boiler or heat pump system for improved efficiency and reduced carbon emissions.');
+                }
+            }
+
+            // Insulation recommendations
+            if (allText.match(/(\d+)\s*mm/) && allText.indexOf('attic') !== -1) {
+                var depth = parseInt(allText.match(/(\d+)\s*mm/)[1]);
+                if (depth < 300) {
+                    recommendations.push('• ROOF INSULATION: Current depth ' + depth + 'mm below Part L standard (300mm minimum). Priority upgrade: Top-up to 300mm mineral wool. Cost: €20-30/m², Payback: 2-3 years, Energy savings: 15-20%.');
+                }
+            }
+
+            // Controls recommendations
+            if (allText.indexOf('thermostat') === -1 && allText.indexOf('control') === -1) {
+                recommendations.push('• HEATING CONTROLS: Install modern programmable thermostat and TRVs on all radiators (except room with main thermostat). Savings: 8-15% on heating costs.');
+            }
+
+            // Ventilation recommendations
+            if (allText.indexOf('ventilation') !== -1) {
+                recommendations.push('• VENTILATION: Verify mechanical ventilation flow rates comply with TGD Part F (kitchen ≥60 l/s, bathroom ≥15 l/s). Ensure filter maintenance schedule in place.');
+            }
+
+            // Renewable energy recommendations
+            if (allText.indexOf('south facing') !== -1 || allText.indexOf('south-facing') !== -1) {
+                recommendations.push('• RENEWABLE ENERGY: South-facing roof aspect suitable for solar PV or solar thermal installation. Consider 3-4kWp solar PV system. Typical ROI: 7-10 years, 40-60% electricity offset.');
+            }
+
+            // Photo analysis recommendations
+            if (job.photos && job.photos.length > 0) {
+                recommendations.push('');
+                recommendations.push('PHOTO ANALYSIS INSIGHTS');
+                recommendations.push('═══════════════════════════════');
+
+                var photoInsights = [];
+                for (var i = 0; i < job.photos.length; i++) {
+                    if (job.photos[i].extracted && job.photos[i].extracted.length > 50) {
+                        var extracted = job.photos[i].extracted.toLowerCase();
+
+                        if (extracted.indexOf('boiler') !== -1) {
+                            photoInsights.push('• Photo ' + (i+1) + ': Equipment data captured - verify boiler specifications and service history');
+                        }
+                        if (extracted.indexOf('temperature') !== -1 || extracted.indexOf('°c') !== -1) {
+                            photoInsights.push('• Photo ' + (i+1) + ': Temperature data recorded - compare against comfort standards (21°C living, 18°C bedrooms)');
+                        }
+                        if (extracted.indexOf('insulation') !== -1) {
+                            photoInsights.push('• Photo ' + (i+1) + ': Insulation specifications documented - verify thickness meets Part L requirements');
+                        }
+                    }
+                }
+
+                if (photoInsights.length > 0) {
+                    recommendations = recommendations.concat(photoInsights);
+                } else {
+                    recommendations.push('• ' + job.photos.length + ' photos captured for visual documentation. Recommend adding notes for key equipment and measurements.');
+                }
+            }
+
+            // Compliance recommendations
+            recommendations.push('');
+            recommendations.push('REGULATORY COMPLIANCE');
+            recommendations.push('═══════════════════════════════');
+            recommendations.push('• Complete DEAP assessment using surveyed data to determine BER rating');
+            recommendations.push('• Conduct air tightness test (target: <7 m³/h/m² @ 50Pa for new builds)');
+            recommendations.push('• Verify all upgrades comply with TGD L 2022 and Building Regulations 1997-2023');
+            recommendations.push('• Document U-values for all thermal elements (walls, roof, floor, windows, doors)');
+            recommendations.push('• Ensure heating system sizing meets heat loss calculations (EN 12831)');
+
+            // Next steps
+            recommendations.push('');
+            recommendations.push('NEXT STEPS');
+            recommendations.push('═══════════════════════════════');
+            recommendations.push('1. Review and approve this report');
+            recommendations.push('2. Complete DEAP assessment for BER certificate');
+            recommendations.push('3. Provide client with upgrade cost estimates and ROI analysis');
+            recommendations.push('4. Schedule follow-up site visit if additional data required');
+            recommendations.push('5. Submit final report to client with actionable recommendations');
+
+            var fullRecommendations = recommendations.join('\n');
+
+            document.getElementById('edit-ai-recommendations').value = fullRecommendations;
+
+            if (!job.managerInputs) job.managerInputs = {};
+            job.managerInputs.recommendations = fullRecommendations;
+
+            log('✅ AI recommendations generated');
+            alert('✅ AI Recommendations Generated!\n\nBased on:\n• Survey completion: ' + (job.jobTypeId ? aiAnalysis.completionPercentage + '%' : 'N/A') + '\n• Voice notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n• Photos with OCR: ' + (job.photos ? job.photos.length : 0) + '\n\nReview and edit the recommendations as needed.');
         }
 
         function approveAndFinalizeReport() {
@@ -1604,6 +1801,7 @@
             document.getElementById('edit-created').textContent = new Date(job.createdAt).toLocaleString();
             document.getElementById('edit-createdby').textContent = job.createdBy || 'Field Operator';
             document.getElementById('edit-manager-notes').value = (job.managerInputs && job.managerInputs.notes) || '';
+            document.getElementById('edit-ai-recommendations').value = (job.managerInputs && job.managerInputs.recommendations) || '';
 
             // Populate staff dropdown
             var staffSel = document.getElementById('edit-staff');
@@ -1712,6 +1910,7 @@
 
             if (!job.managerInputs) job.managerInputs = {};
             job.managerInputs.notes = document.getElementById('edit-manager-notes').value.trim();
+            job.managerInputs.recommendations = document.getElementById('edit-ai-recommendations').value.trim();
 
             // Update voice notes
             var noteInputs = document.querySelectorAll('#modal-notes input[data-note-id]');
