@@ -81,6 +81,40 @@
         .google-btn:hover { border-color: #2C5F2D; }
 
         .chart-placeholder { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); height: 300px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #2C5F2D; font-size: 24px; font-weight: bold; margin: 20px 0; }
+
+        /* MODAL STYLES */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); overflow-y: auto; }
+        .modal.active { display: block; }
+        .modal-content { background: white; margin: 30px auto; max-width: 900px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); position: relative; }
+        .modal-header { background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); color: white; padding: 25px 30px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 24px; font-weight: bold; }
+        .modal-close { background: none; border: none; color: white; font-size: 32px; cursor: pointer; padding: 0; width: 40px; height: 40px; line-height: 32px; }
+        .modal-close:hover { background: rgba(255,255,255,0.2); border-radius: 50%; }
+        .modal-body { padding: 30px; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 20px 30px; border-top: 1px solid #ddd; display: flex; gap: 10px; justify-content: flex-end; }
+
+        .detail-section { margin-bottom: 30px; }
+        .detail-section h3 { color: #2C5F2D; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px; }
+        .detail-row { display: grid; grid-template-columns: 200px 1fr; gap: 15px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        .detail-label { font-weight: bold; color: #666; }
+        .detail-value { color: #333; }
+        .detail-value input, .detail-value select, .detail-value textarea { margin: 0; }
+
+        .note-item { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #2C5F2D; }
+        .note-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .note-item-num { font-weight: bold; color: #2C5F2D; }
+        .note-item-time { font-size: 12px; color: #999; }
+        .note-item-text { color: #333; line-height: 1.6; }
+        .note-item-text input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .photo-item { border-radius: 8px; overflow: hidden; border: 2px solid #ddd; position: relative; }
+        .photo-item img { width: 100%; height: 150px; object-fit: cover; }
+        .photo-item-delete { position: absolute; top: 5px; right: 5px; background: #f44336; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 18px; line-height: 28px; }
+
+        .editable { cursor: pointer; padding: 8px; border-radius: 4px; transition: background 0.2s; }
+        .editable:hover { background: #e8f5e9; }
+        .editing { background: white; border: 2px solid #2C5F2D; }
     </style>
 </head>
 <body>
@@ -284,11 +318,95 @@
         </div>
     </div>
 
+    <!-- JOB DETAILS MODAL -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Job Details</div>
+                <button class="modal-close" onclick="closeJobModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Project Details -->
+                <div class="detail-section">
+                    <h3>📋 Project Information</h3>
+                    <div class="detail-row">
+                        <div class="detail-label">Project Reference:</div>
+                        <div class="detail-value">
+                            <input type="text" id="edit-ref" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Address:</div>
+                        <div class="detail-value">
+                            <input type="text" id="edit-address">
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value">
+                            <select id="edit-status">
+                                <option value="pending">Pending</option>
+                                <option value="in-progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Assigned To:</div>
+                        <div class="detail-value">
+                            <select id="edit-staff">
+                                <option value="">Unassigned</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Created:</div>
+                        <div class="detail-value" id="edit-created">-</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Created By:</div>
+                        <div class="detail-value" id="edit-createdby">-</div>
+                    </div>
+                </div>
+
+                <!-- Voice Notes -->
+                <div class="detail-section">
+                    <h3>🎤 Voice Notes (<span id="notes-count">0</span>)</h3>
+                    <div id="modal-notes"></div>
+                    <div style="text-align: center; color: #999; padding: 20px;" id="no-notes" style="display: none;">
+                        No voice notes recorded
+                    </div>
+                </div>
+
+                <!-- Photos -->
+                <div class="detail-section">
+                    <h3>📷 Photos (<span id="photos-count">0</span>)</h3>
+                    <div id="modal-photos" class="photo-grid"></div>
+                    <div style="text-align: center; color: #999; padding: 20px;" id="no-photos">
+                        No photos uploaded
+                    </div>
+                </div>
+
+                <!-- Manager Notes -->
+                <div class="detail-section">
+                    <h3>📝 Manager Notes</h3>
+                    <textarea id="edit-manager-notes" rows="4" placeholder="Add manager notes or instructions..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeJobModal()">Cancel</button>
+                <button class="btn-success" onclick="saveJobChanges()">💾 Save Changes</button>
+                <button class="btn-danger" onclick="deleteJobFromModal()">🗑️ Delete Job</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         var STATE = {
             user: null,
             jobs: [],
-            staffList: ['John Murphy', 'Sarah O\'Brien', 'Michael Kelly', 'Emma Walsh']
+            staffList: ['John Murphy', 'Sarah O\'Brien', 'Michael Kelly', 'Emma Walsh'],
+            currentJob: null
         };
 
         function log(m) { console.log('[DASHBOARD] ' + m); }
@@ -668,27 +786,149 @@
             window.location.href = 'mailto:' + recipient + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
         }
 
+        // ============= JOB DETAILS MODAL =============
         function viewJobDetails(jobId) {
             var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
             if (!job) return;
 
-            var notes = '';
-            if (job.voiceNotes && job.voiceNotes.length > 0) {
-                for (var i = 0; i < job.voiceNotes.length; i++) {
-                    notes += '\n' + (i+1) + '. ' + job.voiceNotes[i].transcription;
-                }
-            } else {
-                notes = '\nNo notes recorded';
+            STATE.currentJob = job;
+
+            // Populate modal
+            document.getElementById('modalTitle').textContent = job.projectReference;
+            document.getElementById('edit-ref').value = job.projectReference;
+            document.getElementById('edit-address').value = job.address;
+            document.getElementById('edit-status').value = job.status;
+            document.getElementById('edit-created').textContent = new Date(job.createdAt).toLocaleString();
+            document.getElementById('edit-createdby').textContent = job.createdBy || 'Field Operator';
+            document.getElementById('edit-manager-notes').value = (job.managerInputs && job.managerInputs.notes) || '';
+
+            // Populate staff dropdown
+            var staffSel = document.getElementById('edit-staff');
+            staffSel.innerHTML = '<option value="">Unassigned</option>';
+            for (var i = 0; i < STATE.staffList.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = STATE.staffList[i];
+                opt.textContent = STATE.staffList[i];
+                if (job.assignedTo === STATE.staffList[i]) opt.selected = true;
+                staffSel.appendChild(opt);
             }
 
-            alert('📋 Job Details\n\n' +
-                  'Reference: ' + job.projectReference + '\n' +
-                  'Address: ' + job.address + '\n' +
-                  'Status: ' + job.status.toUpperCase() + '\n' +
-                  'Created: ' + new Date(job.createdAt).toLocaleDateString() + '\n' +
-                  'Assigned: ' + (job.assignedTo || 'Unassigned') + '\n' +
-                  '\nVoice Notes:' + notes);
+            // Display voice notes
+            var notesHtml = '';
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                document.getElementById('notes-count').textContent = job.voiceNotes.length;
+                document.getElementById('no-notes').style.display = 'none';
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    var note = job.voiceNotes[i];
+                    notesHtml += '<div class="note-item">' +
+                        '<div class="note-item-header">' +
+                            '<span class="note-item-num">Note ' + (i+1) + '</span>' +
+                            '<span class="note-item-time">' + new Date(note.captured_at).toLocaleString() + '</span>' +
+                        '</div>' +
+                        '<div class="note-item-text">' +
+                            '<input type="text" value="' + note.transcription.replace(/"/g, '&quot;') + '" data-note-id="' + note.id + '">' +
+                        '</div>' +
+                    '</div>';
+                }
+            } else {
+                document.getElementById('notes-count').textContent = '0';
+                document.getElementById('no-notes').style.display = 'block';
+            }
+            document.getElementById('modal-notes').innerHTML = notesHtml;
+
+            // Display photos
+            var photosHtml = '';
+            if (job.photos && job.photos.length > 0) {
+                document.getElementById('photos-count').textContent = job.photos.length;
+                document.getElementById('no-photos').style.display = 'none';
+                for (var i = 0; i < job.photos.length; i++) {
+                    var photo = job.photos[i];
+                    photosHtml += '<div class="photo-item">' +
+                        '<img src="' + photo.data + '" alt="Photo ' + (i+1) + '">' +
+                        '<button class="photo-item-delete" onclick="deletePhoto(\'' + photo.id + '\')">&times;</button>' +
+                    '</div>';
+                }
+            } else {
+                document.getElementById('photos-count').textContent = '0';
+                document.getElementById('no-photos').style.display = 'block';
+            }
+            document.getElementById('modal-photos').innerHTML = photosHtml;
+
+            // Show modal
+            document.getElementById('jobModal').classList.add('active');
+            log('📋 Opened job details: ' + job.projectReference);
         }
+
+        function closeJobModal() {
+            document.getElementById('jobModal').classList.remove('active');
+            STATE.currentJob = null;
+            log('✖️ Closed job details');
+        }
+
+        function saveJobChanges() {
+            if (!STATE.currentJob) return;
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
+            if (!job) return;
+
+            // Update job fields
+            job.address = document.getElementById('edit-address').value.trim();
+            job.status = document.getElementById('edit-status').value;
+            job.assignedTo = document.getElementById('edit-staff').value || null;
+
+            if (!job.managerInputs) job.managerInputs = {};
+            job.managerInputs.notes = document.getElementById('edit-manager-notes').value.trim();
+
+            // Update voice notes
+            var noteInputs = document.querySelectorAll('#modal-notes input[data-note-id]');
+            for (var i = 0; i < noteInputs.length; i++) {
+                var noteId = noteInputs[i].getAttribute('data-note-id');
+                var newText = noteInputs[i].value.trim();
+                var note = job.voiceNotes.find(function(n) { return n.id === noteId; });
+                if (note) note.transcription = newText;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('emg_all_jobs', JSON.stringify(STATE.jobs));
+
+            log('✅ Saved changes: ' + job.projectReference);
+            alert('✅ Changes saved successfully!');
+
+            closeJobModal();
+            loadData();
+        }
+
+        function deletePhoto(photoId) {
+            if (!STATE.currentJob) return;
+            if (!confirm('Delete this photo?')) return;
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === STATE.currentJob.jobId; });
+            if (!job || !job.photos) return;
+
+            job.photos = job.photos.filter(function(p) { return p.id !== photoId; });
+            localStorage.setItem('emg_all_jobs', JSON.stringify(STATE.jobs));
+
+            log('🗑️ Deleted photo');
+            viewJobDetails(job.jobId); // Reload modal
+        }
+
+        function deleteJobFromModal() {
+            if (!STATE.currentJob) return;
+            if (!confirm('⚠️ Delete this project? This cannot be undone.')) return;
+
+            STATE.jobs = STATE.jobs.filter(function(j) { return j.jobId !== STATE.currentJob.jobId; });
+            localStorage.setItem('emg_all_jobs', JSON.stringify(STATE.jobs));
+
+            log('🗑️ Deleted job: ' + STATE.currentJob.projectReference);
+            closeJobModal();
+            loadData();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(e) {
+            var modal = document.getElementById('jobModal');
+            if (e.target === modal) closeJobModal();
+        };
 
         function deleteJob(jobId) {
             if (!confirm('⚠️ Delete this project? This cannot be undone.')) return;

@@ -110,10 +110,22 @@
             STATE.recognition.interimResults = true;
             STATE.recognition.lang = 'en-IE';
 
+            var finalTranscript = '';
+            var interimTranscript = '';
+
             STATE.recognition.onresult = function(e) {
-                var t = '';
-                for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-                STATE.transcript = t.trim();
+                interimTranscript = '';
+
+                for (var i = e.resultIndex; i < e.results.length; i++) {
+                    var transcript = e.results[i][0].transcript;
+                    if (e.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                STATE.transcript = (finalTranscript + interimTranscript).trim();
                 text.textContent = STATE.transcript || 'Listening...';
             };
 
@@ -125,8 +137,12 @@
 
             STATE.recognition.onend = function() {
                 if (!STATE.recording) return;
-                log('⚠️ Recognition ended unexpectedly, restarting...');
-                if (STATE.recognition) STATE.recognition.start();
+                log('⚠️ Recognition ended, restarting...');
+                try {
+                    if (STATE.recognition) STATE.recognition.start();
+                } catch(err) {
+                    log('❌ Restart failed: ' + err.message);
+                }
             };
 
             try {
