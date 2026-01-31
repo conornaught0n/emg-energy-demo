@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG - ULTRA SIMPLE</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .box { background: white; padding: 30px; margin: 20px auto; max-width: 600px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 15px; font-size: 18px; margin: 10px 0; border: 2px solid #ddd; border-radius: 5px; }
+        button { width: 100%; padding: 20px; font-size: 20px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+        .green { background: #4CAF50; color: white; }
+        .blue { background: #2196F3; color: white; }
+        .orange { background: #FF9800; color: white; }
+        .red { background: #f44336; color: white; }
+        .result { background: #e8f5e9; padding: 20px; margin: 20px 0; border-radius: 5px; border: 3px solid #4CAF50; display: none; }
+        .log { background: #000; color: #0f0; padding: 15px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin: 20px 0; border-radius: 5px; }
+        h1 { color: #2C5F2D; text-align: center; }
+        h2 { color: #333; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🏠 EMG ULTRA SIMPLE</h1>
+        <p style="text-align: center; color: #666;">Every step shows what happens</p>
+    </div>
+
+    <div class="box">
+        <h2>STEP 1: Create Project</h2>
+        <input type="text" id="addr" placeholder="Enter address" value="123 Test Street">
+        <button class="green" onclick="step1_create()">1️⃣ CREATE PROJECT</button>
+
+        <div id="result1" class="result">
+            <h3 style="color: #4CAF50;">✅ PROJECT CREATED!</h3>
+            <p><strong>Project ID:</strong> <span id="projId"></span></p>
+            <p><strong>Reference:</strong> <span id="projRef"></span></p>
+            <p><strong>Address:</strong> <span id="projAddr"></span></p>
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>STEP 2: Add Voice Note</h2>
+        <input type="text" id="note" placeholder="Type what you would say" value="Living room, 20 degrees">
+        <button class="blue" onclick="step2_addNote()">2️⃣ ADD NOTE</button>
+
+        <div id="notes" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="box">
+        <h2>STEP 3: Save to localStorage</h2>
+        <button class="orange" onclick="step3_save()">3️⃣ SAVE DATA</button>
+        <p id="saveResult" style="margin-top: 10px; font-weight: bold;"></p>
+    </div>
+
+    <div class="box">
+        <h2>STEP 4: View Saved Data</h2>
+        <button class="blue" onclick="step4_view()">4️⃣ SHOW WHAT'S SAVED</button>
+        <div id="savedData" style="margin-top: 20px; white-space: pre-wrap; font-family: monospace; background: #f5f5f5; padding: 15px; border-radius: 5px; display: none;"></div>
+    </div>
+
+    <div class="box">
+        <h2>🔧 Debug Log (Watch This!)</h2>
+        <div id="log" class="log"></div>
+        <button class="red" onclick="clearEverything()">🗑️ CLEAR EVERYTHING</button>
+    </div>
+
+    <script>
+        // GLOBAL STATE
+        var PROJECT = null;
+        var NOTES = [];
+
+        function writeLog(msg) {
+            var now = new Date();
+            var time = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+            var text = '[' + time + '] ' + msg;
+
+            console.log(text);
+
+            var logDiv = document.getElementById('log');
+            logDiv.innerHTML += text + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        writeLog('🚀 Page loaded successfully');
+        writeLog('✅ JavaScript is working');
+
+        function step1_create() {
+            writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            writeLog('▶️ STEP 1: Create Project');
+
+            var addrInput = document.getElementById('addr');
+            var addr = addrInput.value.trim();
+
+            writeLog('Address from input: "' + addr + '"');
+
+            if (!addr) {
+                alert('❌ Please enter an address!');
+                writeLog('❌ No address entered');
+                return;
+            }
+
+            // Create project object
+            var timestamp = Date.now();
+            var randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            PROJECT = {
+                id: 'proj-' + timestamp,
+                ref: 'EMG-2026-' + randomId,
+                address: addr,
+                created: new Date().toISOString()
+            };
+
+            NOTES = [];
+
+            writeLog('✅ Project created!');
+            writeLog('   ID: ' + PROJECT.id);
+            writeLog('   Reference: ' + PROJECT.ref);
+            writeLog('   Address: ' + PROJECT.address);
+
+            // Show result
+            document.getElementById('result1').style.display = 'block';
+            document.getElementById('projId').textContent = PROJECT.id;
+            document.getElementById('projRef').textContent = PROJECT.ref;
+            document.getElementById('projAddr').textContent = PROJECT.address;
+
+            writeLog('✅ STEP 1 COMPLETE');
+        }
+
+        function step2_addNote() {
+            writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            writeLog('▶️ STEP 2: Add Note');
+
+            if (!PROJECT) {
+                alert('❌ Create a project first (Step 1)');
+                writeLog('❌ No project exists');
+                return;
+            }
+
+            var noteInput = document.getElementById('note');
+            var noteText = noteInput.value.trim();
+
+            if (!noteText) {
+                alert('❌ Enter note text!');
+                writeLog('❌ No note text entered');
+                return;
+            }
+
+            var note = {
+                id: 'note-' + Date.now(),
+                text: noteText,
+                time: new Date().toISOString()
+            };
+
+            NOTES.push(note);
+
+            writeLog('✅ Note added: "' + noteText + '"');
+            writeLog('   Total notes: ' + NOTES.length);
+
+            // Display notes
+            var notesDiv = document.getElementById('notes');
+            notesDiv.innerHTML = '<h3>📝 Your Notes (' + NOTES.length + '):</h3>';
+
+            for (var i = 0; i < NOTES.length; i++) {
+                notesDiv.innerHTML += '<div style="background: #f0f0f0; padding: 10px; margin: 5px 0; border-radius: 5px;">' +
+                    '<strong>Note ' + (i + 1) + ':</strong> ' + NOTES[i].text +
+                    '</div>';
+            }
+
+            noteInput.value = '';
+            writeLog('✅ STEP 2 COMPLETE');
+        }
+
+        function step3_save() {
+            writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            writeLog('▶️ STEP 3: Save to localStorage');
+
+            if (!PROJECT) {
+                alert('❌ Create a project first!');
+                writeLog('❌ No project to save');
+                return;
+            }
+
+            if (NOTES.length === 0) {
+                alert('❌ Add at least one note!');
+                writeLog('❌ No notes to save');
+                return;
+            }
+
+            try {
+                // Create job data
+                var jobData = {
+                    jobId: PROJECT.id,
+                    projectReference: PROJECT.ref,
+                    address: PROJECT.address,
+                    createdAt: PROJECT.created,
+                    status: 'in-progress',
+                    voiceNotes: NOTES.map(function(n) {
+                        return {
+                            id: n.id,
+                            transcription: n.text,
+                            captured_at: n.time
+                        };
+                    }),
+                    photos: [],
+                    managerInputs: {}
+                };
+
+                writeLog('📦 Created job data object');
+                writeLog('   Job ID: ' + jobData.jobId);
+                writeLog('   Voice notes: ' + jobData.voiceNotes.length);
+
+                // Get existing jobs
+                var existingData = localStorage.getItem('emg_all_jobs');
+                var jobs = [];
+
+                if (existingData) {
+                    jobs = JSON.parse(existingData);
+                    writeLog('📂 Found ' + jobs.length + ' existing jobs');
+                } else {
+                    writeLog('📂 No existing jobs');
+                }
+
+                // Add or update
+                var found = false;
+                for (var i = 0; i < jobs.length; i++) {
+                    if (jobs[i].jobId === PROJECT.id) {
+                        jobs[i] = jobData;
+                        found = true;
+                        writeLog('📝 Updated existing job');
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    jobs.push(jobData);
+                    writeLog('➕ Added new job');
+                }
+
+                // Save to localStorage
+                var jsonString = JSON.stringify(jobs);
+                writeLog('💾 Saving ' + jsonString.length + ' characters to localStorage...');
+
+                localStorage.setItem('emg_all_jobs', jsonString);
+
+                writeLog('✅ SAVED TO LOCALSTORAGE!');
+                writeLog('   Total jobs now: ' + jobs.length);
+
+                document.getElementById('saveResult').innerHTML =
+                    '✅ <span style="color: green;">SAVED! Total jobs: ' + jobs.length + '</span>';
+
+                writeLog('✅ STEP 3 COMPLETE');
+
+            } catch (err) {
+                writeLog('❌ ERROR: ' + err.message);
+                alert('❌ Save failed: ' + err.message);
+            }
+        }
+
+        function step4_view() {
+            writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            writeLog('▶️ STEP 4: View Saved Data');
+
+            try {
+                var data = localStorage.getItem('emg_all_jobs');
+
+                if (!data) {
+                    alert('No data in localStorage yet!');
+                    writeLog('📭 No data in localStorage');
+                    return;
+                }
+
+                var jobs = JSON.parse(data);
+                writeLog('✅ Found ' + jobs.length + ' jobs in localStorage');
+
+                var savedDiv = document.getElementById('savedData');
+                savedDiv.style.display = 'block';
+                savedDiv.innerHTML = '<h3>💾 Saved Data (' + jobs.length + ' projects):</h3>\n\n';
+
+                for (var i = 0; i < jobs.length; i++) {
+                    var job = jobs[i];
+                    savedDiv.innerHTML += '━━━━━━━━━━━━━━━━━━━━━━\n';
+                    savedDiv.innerHTML += 'Project ' + (i + 1) + ':\n';
+                    savedDiv.innerHTML += '  Reference: ' + job.projectReference + '\n';
+                    savedDiv.innerHTML += '  Address: ' + job.address + '\n';
+                    savedDiv.innerHTML += '  Voice Notes: ' + job.voiceNotes.length + '\n';
+
+                    for (var j = 0; j < job.voiceNotes.length; j++) {
+                        savedDiv.innerHTML += '    ' + (j + 1) + '. ' + job.voiceNotes[j].transcription + '\n';
+                    }
+                    savedDiv.innerHTML += '\n';
+                }
+
+                writeLog('✅ STEP 4 COMPLETE');
+
+            } catch (err) {
+                writeLog('❌ ERROR: ' + err.message);
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function clearEverything() {
+            if (!confirm('⚠️ Clear ALL data and start over?')) {
+                return;
+            }
+
+            writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            writeLog('🗑️ Clearing everything...');
+
+            localStorage.clear();
+            PROJECT = null;
+            NOTES = [];
+
+            document.getElementById('addr').value = '123 Test Street';
+            document.getElementById('note').value = 'Living room, 20 degrees';
+            document.getElementById('result1').style.display = 'none';
+            document.getElementById('notes').innerHTML = '';
+            document.getElementById('saveResult').innerHTML = '';
+            document.getElementById('savedData').style.display = 'none';
+            document.getElementById('savedData').innerHTML = '';
+
+            writeLog('✅ Everything cleared');
+            writeLog('✅ Ready to start fresh');
+        }
+
+        writeLog('✅ All functions loaded');
+        writeLog('✅ Ready to use!');
+        writeLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    </script>
+</body>
+</html>
