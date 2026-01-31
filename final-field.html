@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EMG Surveyor Mode - Professional Survey System</title>
+    <script src="job-types-config.js"></script>
+    <script src="ai-processor.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial; background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); min-height: 100vh; padding: 20px; }
@@ -28,6 +30,22 @@
         .transcribe-box { background: #ffebee; border: 3px solid #D32F2F; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
         .transcribe-box.active { display: block; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+
+        /* Checklist Styles */
+        .checklist { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; max-height: 400px; overflow-y: auto; }
+        .checklist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .checklist-title { font-weight: bold; color: #2C5F2D; font-size: 16px; }
+        .checklist-completion { font-size: 24px; font-weight: bold; color: #4CAF50; }
+        .checklist-category { margin: 15px 0; }
+        .category-name { font-weight: bold; color: #666; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        .checklist-item { display: flex; align-items: center; padding: 8px; margin: 5px 0; background: white; border-radius: 6px; border-left: 3px solid #ddd; }
+        .checklist-item.checked { border-left-color: #4CAF50; background: #e8f5e9; }
+        .checklist-checkbox { font-size: 20px; margin-right: 10px; min-width: 25px; }
+        .checklist-item-name { flex: 1; font-size: 14px; color: #333; }
+        .checklist-confidence { font-size: 11px; color: #4CAF50; font-weight: bold; }
+        .missing-items { background: #fff3cd; border: 2px solid #FF9800; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .missing-items h3 { color: #856404; margin-bottom: 10px; font-size: 14px; }
+        .missing-items ul { margin: 0 0 0 20px; color: #856404; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -42,9 +60,22 @@
         <select id="projSel"></select>
         <div style="text-align: center; margin: 10px; color: #666;">OR</div>
         <input type="text" id="addr" placeholder="Enter address">
+
+        <label style="display: block; margin-top: 15px; font-weight: bold; color: #333;">Survey Type:</label>
+        <select id="jobType">
+            <option value="">-- Select Survey Type --</option>
+        </select>
+
         <button class="btn-green" onclick="createProj()">CREATE PROJECT</button>
         <div id="statusBox" class="status"></div>
         <div id="warnBox" class="warning">⚠️ Create or select project first</div>
+    </div>
+
+    <!-- AI CHECKLIST CARD -->
+    <div class="card" id="checklistCard" style="display: none;">
+        <h2>🤖 AI Survey Checklist</h2>
+        <div id="checklistContent" class="checklist"></div>
+        <div id="missingItems" class="missing-items" style="display: none;"></div>
     </div>
 
     <div class="card">
@@ -68,21 +99,54 @@
     </div>
 
     <script>
-        var STATE = { projId: null, projRef: null, addr: '', notes: [], recording: false, recognition: null, transcript: '' };
+        var STATE = {
+            projId: null,
+            projRef: null,
+            addr: '',
+            jobTypeId: null,
+            notes: [],
+            recording: false,
+            recognition: null,
+            transcript: '',
+            checkedItems: {},
+            jobType: null
+        };
 
         function log(m) { console.log(m); }
 
+        function loadJobTypes() {
+            var types = getJobTypes();
+            var sel = document.getElementById('jobType');
+
+            for (var key in types) {
+                if (types.hasOwnProperty(key)) {
+                    var opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = types[key].icon + ' ' + types[key].name;
+                    sel.appendChild(opt);
+                }
+            }
+            log('✅ Loaded ' + Object.keys(types).length + ' job types');
+        }
+
         function createProj() {
             var addr = document.getElementById('addr').value.trim();
+            var jobTypeId = document.getElementById('jobType').value;
+
             if (!addr) { alert('❌ Enter address!'); return; }
+            if (!jobTypeId) { alert('❌ Select survey type!'); return; }
 
             STATE.projId = 'p' + Date.now();
             STATE.projRef = 'EMG-2026-' + Math.random().toString(36).substr(2,6).toUpperCase();
             STATE.addr = addr;
+            STATE.jobTypeId = jobTypeId;
+            STATE.jobType = getJobType(jobTypeId);
             STATE.notes = [];
+            STATE.checkedItems = {};
 
-            log('✅ Created: ' + STATE.projRef);
+            log('✅ Created: ' + STATE.projRef + ' (' + STATE.jobType.name + ')');
             updateUI();
+            displayChecklist();
         }
 
         function toggleRec() {
@@ -171,8 +235,26 @@
 
         function saveNote() {
             if (!STATE.transcript) return;
-            STATE.notes.push({ id: 'n' + Date.now(), text: STATE.transcript, time: new Date().toISOString() });
+            var noteObj = { id: 'n' + Date.now(), transcription: STATE.transcript, captured_at: new Date().toISOString() };
+            STATE.notes.push(noteObj);
             log('✅ Note saved: ' + STATE.transcript);
+
+            // Run AI analysis if job type exists
+            if (STATE.jobType) {
+                log('🤖 Running AI analysis...');
+                var matches = AI_PROCESSOR.analyzeVoiceNote(STATE.transcript, STATE.jobType);
+                for (var i = 0; i < matches.length; i++) {
+                    STATE.checkedItems[matches[i].itemId] = {
+                        checked: true,
+                        confidence: matches[i].confidence,
+                        source: 'voice',
+                        noteIndex: STATE.notes.length - 1
+                    };
+                }
+                log('🤖 AI found ' + matches.length + ' matches');
+                displayChecklist();
+            }
+
             STATE.transcript = '';
             updateUI();
         }
@@ -190,13 +272,13 @@
                     jobId: STATE.projId,
                     projectReference: STATE.projRef,
                     address: STATE.addr,
+                    jobTypeId: STATE.jobTypeId,
                     createdAt: new Date().toISOString(),
                     status: 'in-progress',
-                    voiceNotes: STATE.notes.map(function(n) {
-                        return { id: n.id, transcription: n.text, captured_at: n.time };
-                    }),
+                    voiceNotes: STATE.notes,
                     photos: [],
-                    managerInputs: {}
+                    managerInputs: {},
+                    checkedItems: STATE.checkedItems
                 };
 
                 var jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
@@ -293,7 +375,89 @@
             }
         }
 
+        function displayChecklist() {
+            if (!STATE.jobType) {
+                document.getElementById('checklistCard').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('checklistCard').style.display = 'block';
+
+            var totalItems = 0;
+            var checkedCount = 0;
+
+            // Count total items and checked items
+            for (var i = 0; i < STATE.jobType.checklist.length; i++) {
+                totalItems += STATE.jobType.checklist[i].items.length;
+            }
+            checkedCount = Object.keys(STATE.checkedItems).length;
+
+            var completionPct = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
+
+            var html = '<div class="checklist-header">' +
+                '<div class="checklist-title">📋 Survey Progress</div>' +
+                '<div class="checklist-completion">' + completionPct + '%</div>' +
+                '</div>';
+
+            // Display checklist categories and items
+            for (var i = 0; i < STATE.jobType.checklist.length; i++) {
+                var category = STATE.jobType.checklist[i];
+                html += '<div class="checklist-category">';
+                html += '<div class="category-name">' + category.category + '</div>';
+
+                for (var j = 0; j < category.items.length; j++) {
+                    var item = category.items[j];
+                    var isChecked = STATE.checkedItems[item.id];
+                    var checkClass = isChecked ? 'checked' : '';
+                    var checkIcon = isChecked ? '✅' : '⬜';
+                    var confidenceText = isChecked ? '<span class="checklist-confidence">(' + isChecked.confidence + '%)</span>' : '';
+
+                    html += '<div class="checklist-item ' + checkClass + '">' +
+                        '<span class="checklist-checkbox">' + checkIcon + '</span>' +
+                        '<span class="checklist-item-name">' + item.name + '</span>' +
+                        confidenceText +
+                        '</div>';
+                }
+
+                html += '</div>';
+            }
+
+            document.getElementById('checklistContent').innerHTML = html;
+
+            // Show missing items if completion < 100%
+            if (completionPct < 100) {
+                var missing = [];
+                for (var i = 0; i < STATE.jobType.checklist.length; i++) {
+                    var category = STATE.jobType.checklist[i];
+                    for (var j = 0; j < category.items.length; j++) {
+                        var item = category.items[j];
+                        if (!STATE.checkedItems[item.id]) {
+                            missing.push(item.name);
+                        }
+                    }
+                }
+
+                if (missing.length > 0 && missing.length <= 10) {
+                    var missingHtml = '<h3>⚠️ Outstanding Items (' + missing.length + '):</h3><ul>';
+                    for (var i = 0; i < Math.min(missing.length, 5); i++) {
+                        missingHtml += '<li>' + missing[i] + '</li>';
+                    }
+                    if (missing.length > 5) {
+                        missingHtml += '<li>...and ' + (missing.length - 5) + ' more</li>';
+                    }
+                    missingHtml += '</ul>';
+                    document.getElementById('missingItems').innerHTML = missingHtml;
+                    document.getElementById('missingItems').style.display = 'block';
+                } else {
+                    document.getElementById('missingItems').style.display = 'none';
+                }
+            } else {
+                document.getElementById('missingItems').style.display = 'none';
+            }
+        }
+
         log('🚀 Loading...');
+        loadJobTypes();
         loadProjs();
         updateUI();
         log('✅ Ready');
