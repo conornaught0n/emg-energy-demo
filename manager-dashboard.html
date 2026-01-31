@@ -761,12 +761,17 @@
                 doc.setFillColor(44, 95, 45);
                 doc.rect(0, 0, pageWidth, 60, 'F');
 
-                // Title on cover
+                // EMG ENERGY Logo Text (top of header)
                 doc.setTextColor(255, 255, 255);
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('EMG ENERGY', pageWidth / 2, 15, { align: 'center' });
+
+                // Title on cover
                 doc.setFontSize(24);
                 doc.setFont(undefined, 'bold');
-                doc.text('BUILDING ENERGY', pageWidth / 2, 25, { align: 'center' });
-                doc.text('ASSESSMENT REPORT', pageWidth / 2, 35, { align: 'center' });
+                doc.text('BUILDING ENERGY', pageWidth / 2, 30, { align: 'center' });
+                doc.text('ASSESSMENT REPORT', pageWidth / 2, 40, { align: 'center' });
 
                 doc.setFontSize(12);
                 doc.setFont(undefined, 'normal');
@@ -811,11 +816,14 @@
                 doc.setFont(undefined, 'normal');
                 doc.text(job.status.toUpperCase().replace('-', ' '), 100, detailY);
 
-                // Company details at bottom of cover
-                doc.setFontSize(10);
-                doc.setTextColor(44, 95, 45);
+                // Company branding box at bottom of cover
+                doc.setFillColor(44, 95, 45);
+                doc.roundedRect(20, 220, pageWidth - 40, 8, 2, 2, 'F');
+
+                doc.setFontSize(14);
+                doc.setTextColor(255, 255, 255);
                 doc.setFont(undefined, 'bold');
-                doc.text('EMG ENERGY CONSULTANTS', pageWidth / 2, 230, { align: 'center' });
+                doc.text('EMG ENERGY CONSULTANTS', pageWidth / 2, 226, { align: 'center' });
 
                 doc.setFontSize(9);
                 doc.setTextColor(80, 80, 80);
