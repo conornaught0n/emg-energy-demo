@@ -63,7 +63,7 @@
     <div class="card">
         <h2>3️⃣ Save</h2>
         <button class="btn-orange" id="saveBtn" onclick="saveProj()">💾 SAVE TO DASHBOARD</button>
-        <button class="btn-purple" onclick="window.location.href='final-dash.html'">📊 VIEW DASHBOARD</button>
+        <button class="btn-purple" onclick="window.location.href='manager-dashboard.html'">📊 VIEW DASHBOARD</button>
     </div>
 
     <script>
@@ -106,7 +106,7 @@
             if (!SR) { alert('❌ Speech not supported! Use Chrome.'); stopRec(); return; }
 
             STATE.recognition = new SR();
-            STATE.recognition.continuous = false;
+            STATE.recognition.continuous = true;
             STATE.recognition.interimResults = true;
             STATE.recognition.lang = 'en-IE';
 
@@ -124,8 +124,9 @@
             };
 
             STATE.recognition.onend = function() {
-                if (STATE.recording && STATE.transcript) saveNote();
-                stopRec();
+                if (!STATE.recording) return;
+                log('⚠️ Recognition ended unexpectedly, restarting...');
+                if (STATE.recognition) STATE.recognition.start();
             };
 
             try {
@@ -139,11 +140,15 @@
         }
 
         function stopRec() {
-            if (STATE.recognition) { STATE.recognition.stop(); STATE.recognition = null; }
+            STATE.recording = false;
+            if (STATE.recognition) {
+                STATE.recognition.stop();
+                STATE.recognition = null;
+            }
+            if (STATE.transcript) saveNote();
             document.getElementById('transcribeBox').classList.remove('active');
             document.getElementById('recBtn').classList.remove('recording');
             document.getElementById('recBtn').textContent = '🎤 RECORD (Auto-Transcribe)';
-            STATE.recording = false;
             log('⏹️ Stopped');
         }
 

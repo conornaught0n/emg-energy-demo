@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG Energy - Manager Dashboard v1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f7fa; }
+
+        .header { background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .header img { height: 40px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .user-info { text-align: right; }
+        .user-name { font-weight: bold; font-size: 18px; }
+        .user-role { font-size: 12px; opacity: 0.9; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border: 1px solid white; border-radius: 6px; cursor: pointer; }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .tab { padding: 15px 30px; border: none; background: none; font-size: 16px; font-weight: 600; cursor: pointer; border-radius: 8px; color: #666; transition: all 0.3s; }
+        .tab.active { background: #2C5F2D; color: white; }
+        .tab:hover { background: #e8f5e9; color: #2C5F2D; }
+        .tab.active:hover { background: #2C5F2D; color: white; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+        .stat-num { font-size: 42px; font-weight: bold; color: #2C5F2D; margin-bottom: 10px; }
+        .stat-label { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-title { font-size: 24px; color: #2C5F2D; margin-bottom: 20px; font-weight: bold; }
+
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
+        .job { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 5px solid #2C5F2D; }
+        .job-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+        .job-ref { font-size: 20px; font-weight: bold; color: #2C5F2D; }
+        .job-status { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .status-pending { background: #FFF3CD; color: #856404; }
+        .status-in-progress { background: #D1ECF1; color: #0C5460; }
+        .status-completed { background: #D4EDDA; color: #155724; }
+        .job-addr { color: #666; margin-bottom: 10px; }
+        .job-meta { display: flex; gap: 20px; color: #999; font-size: 13px; margin-bottom: 15px; }
+        .job-staff { background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 10px 0; }
+        .notes { background: #f9f9f9; padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; margin: 15px 0; }
+        .note { padding: 8px 0; border-bottom: 1px solid #ddd; }
+        .note:last-child { border-bottom: none; }
+        .job-actions { display: flex; gap: 10px; margin-top: 15px; }
+
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: #2C5F2D; color: white; }
+        .btn-primary:hover { background: #1a3a1b; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-secondary:hover { background: #1976D2; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-success:hover { background: #45a049; }
+        .btn-warning { background: #FF9800; color: white; }
+        .btn-warning:hover { background: #F57C00; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-danger:hover { background: #da190b; }
+        .btn-small { padding: 8px 16px; font-size: 14px; }
+
+        input, select, textarea { width: 100%; padding: 12px; font-size: 16px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .empty { text-align: center; padding: 60px 20px; color: #666; }
+        .empty h2 { color: #2C5F2D; margin-bottom: 15px; }
+
+        .filter-bar { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 15px; align-items: end; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .filter-group { flex: 1; }
+        .filter-group label { margin: 0 0 5px 0; font-size: 14px; }
+
+        .login-container { max-width: 500px; margin: 100px auto; }
+        .login-card { background: white; padding: 50px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
+        .google-btn { display: flex; align-items: center; justify-content: center; gap: 15px; background: white; color: #333; border: 2px solid #ddd; padding: 15px 30px; font-size: 18px; width: 100%; margin-top: 20px; }
+        .google-btn:hover { border-color: #2C5F2D; }
+
+        .chart-placeholder { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); height: 300px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #2C5F2D; font-size: 24px; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" style="display: none;">
+        <div class="header" style="justify-content: center;">
+            <div style="text-align: center;">
+                <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png">
+                <div style="font-size: 16px; margin-top: 10px;">Manager Dashboard</div>
+            </div>
+        </div>
+        <div class="login-container">
+            <div class="login-card">
+                <h1 style="color: #2C5F2D; margin-bottom: 10px;">Welcome Back</h1>
+                <p style="color: #666; margin-bottom: 30px;">Sign in to access the manager dashboard</p>
+
+                <button class="google-btn" onclick="googleLogin()">
+                    <svg width="24" height="24" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Sign in with Google
+                </button>
+
+                <div style="margin: 30px 0; color: #999;">OR</div>
+
+                <input type="text" id="manualName" placeholder="Enter your name manually" style="margin-bottom: 10px;">
+                <button class="btn-primary" onclick="manualLogin()" style="width: 100%;">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="mainDashboard" style="display: none;">
+        <div class="header">
+            <div>
+                <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png">
+                <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Manager Dashboard v1</div>
+            </div>
+            <div class="header-right">
+                <button class="btn-success" onclick="window.location.href='final-field.html'">🎤 Field Capture</button>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Manager</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- STATS -->
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num" id="statTotal">0</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="statActive">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="statCompleted">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="statNotes">0</div>
+                    <div class="stat-label">Voice Notes</div>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('overview')">📊 Overview</button>
+                <button class="tab" onclick="switchTab('jobs')">📋 All Jobs</button>
+                <button class="tab" onclick="switchTab('create')">➕ Create Job</button>
+                <button class="tab" onclick="switchTab('reports')">📄 Reports</button>
+                <button class="tab" onclick="switchTab('analytics')">📈 Analytics</button>
+            </div>
+
+            <!-- TAB: OVERVIEW -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="card">
+                    <div class="card-title">Recent Projects</div>
+                    <div id="recentJobs"></div>
+                </div>
+            </div>
+
+            <!-- TAB: ALL JOBS -->
+            <div id="tab-jobs" class="tab-content">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label>Search</label>
+                        <input type="text" id="searchInput" placeholder="Reference, address..." onkeyup="filterJobs()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="filterStatus" onchange="filterJobs()">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Staff</label>
+                        <select id="filterStaff" onchange="filterJobs()">
+                            <option value="">All Staff</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                    </div>
+                </div>
+                <div id="allJobsGrid" class="jobs-grid"></div>
+                <div id="emptyJobs" class="empty" style="display: none;">
+                    <h2>📋 No Projects Found</h2>
+                    <p>Create projects in the field capture interface or use the Create Job tab.</p>
+                </div>
+            </div>
+
+            <!-- TAB: CREATE JOB -->
+            <div id="tab-create" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Create New Job</div>
+                    <form onsubmit="createJob(event)">
+                        <div class="form-grid">
+                            <div>
+                                <label>Project Reference *</label>
+                                <input type="text" id="newJobRef" placeholder="EMG-2026-XXXXX" required>
+                            </div>
+                            <div>
+                                <label>Status *</label>
+                                <select id="newJobStatus" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label>Address *</label>
+                        <input type="text" id="newJobAddr" placeholder="Full address" required>
+
+                        <label>Assign to Staff</label>
+                        <select id="newJobStaff">
+                            <option value="">-- Unassigned --</option>
+                        </select>
+
+                        <label>Notes</label>
+                        <textarea id="newJobNotes" rows="4" placeholder="Additional instructions or notes..."></textarea>
+
+                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 18px;">Create Job</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB: REPORTS -->
+            <div id="tab-reports" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Generate Reports</div>
+                    <p style="color: #666; margin-bottom: 20px;">Select a project to generate a PDF report or send via email.</p>
+
+                    <label>Select Project</label>
+                    <select id="reportProject" onchange="updateReportPreview()">
+                        <option value="">-- Select Project --</option>
+                    </select>
+
+                    <div id="reportPreview" style="display: none; margin-top: 30px;">
+                        <h3 style="color: #2C5F2D; margin-bottom: 15px;">Report Preview</h3>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px dashed #ddd;">
+                            <div id="reportContent"></div>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; margin-top: 20px;">
+                            <button class="btn-primary" onclick="generatePDF()">📄 Generate PDF</button>
+                            <button class="btn-secondary" onclick="sendEmail()">✉️ Send via Email</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: ANALYTICS -->
+            <div id="tab-analytics" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Work Analytics</div>
+
+                    <div class="chart-placeholder">
+                        📊 Projects by Status
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+                        <div class="card" style="margin: 0;">
+                            <h3 style="color: #2C5F2D; margin-bottom: 15px;">Staff Performance</h3>
+                            <div id="staffStats"></div>
+                        </div>
+                        <div class="card" style="margin: 0;">
+                            <h3 style="color: #2C5F2D; margin-bottom: 15px;">Recent Activity</h3>
+                            <div id="recentActivity"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var STATE = {
+            user: null,
+            jobs: [],
+            staffList: ['John Murphy', 'Sarah O\'Brien', 'Michael Kelly', 'Emma Walsh']
+        };
+
+        function log(m) { console.log('[DASHBOARD] ' + m); }
+
+        // ============= AUTHENTICATION =============
+        function init() {
+            log('🚀 Initializing dashboard...');
+            var user = localStorage.getItem('emg_user');
+            if (user) {
+                STATE.user = JSON.parse(user);
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('mainDashboard').style.display = 'none';
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+            document.getElementById('userName').textContent = STATE.user.name;
+            loadData();
+        }
+
+        function googleLogin() {
+            // Simulate Google OAuth (in production, use real OAuth)
+            var name = prompt('Google Sign-In (Demo)\nEnter your name:');
+            if (!name) return;
+
+            STATE.user = {
+                name: name,
+                email: name.toLowerCase().replace(/\s+/g, '.') + '@emgenergy.ie',
+                loginMethod: 'google',
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('emg_user', JSON.stringify(STATE.user));
+            log('✅ Google login: ' + STATE.user.name);
+            showDashboard();
+        }
+
+        function manualLogin() {
+            var name = document.getElementById('manualName').value.trim();
+            if (!name) {
+                alert('❌ Please enter your name');
+                return;
+            }
+
+            STATE.user = {
+                name: name,
+                email: name.toLowerCase().replace(/\s+/g, '.') + '@emgenergy.ie',
+                loginMethod: 'manual',
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('emg_user', JSON.stringify(STATE.user));
+            log('✅ Manual login: ' + STATE.user.name);
+            showDashboard();
+        }
+
+        function logout() {
+            if (!confirm('Are you sure you want to logout?')) return;
+            localStorage.removeItem('emg_user');
+            STATE.user = null;
+            log('👋 Logged out');
+            showLogin();
+        }
+
+        // ============= DATA LOADING =============
+        function loadData() {
+            log('📂 Loading jobs...');
+            try {
+                var data = localStorage.getItem('emg_all_jobs');
+                STATE.jobs = data ? JSON.parse(data) : [];
+                log('✅ Loaded ' + STATE.jobs.length + ' jobs');
+            } catch(e) {
+                log('❌ Load error: ' + e.message);
+                STATE.jobs = [];
+            }
+            updateStats();
+            displayOverview();
+            displayAllJobs();
+            populateDropdowns();
+        }
+
+        function updateStats() {
+            var total = STATE.jobs.length;
+            var active = 0;
+            var completed = 0;
+            var notes = 0;
+
+            for (var i = 0; i < STATE.jobs.length; i++) {
+                if (STATE.jobs[i].status === 'in-progress') active++;
+                if (STATE.jobs[i].status === 'completed') completed++;
+                notes += (STATE.jobs[i].voiceNotes || []).length;
+            }
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statActive').textContent = active;
+            document.getElementById('statCompleted').textContent = completed;
+            document.getElementById('statNotes').textContent = notes;
+        }
+
+        // ============= TABS =============
+        function switchTab(tabName) {
+            // Update tab buttons
+            var tabs = document.querySelectorAll('.tab');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            event.target.classList.add('active');
+
+            // Update tab content
+            var contents = document.querySelectorAll('.tab-content');
+            for (var i = 0; i < contents.length; i++) {
+                contents[i].classList.remove('active');
+            }
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            log('📑 Switched to tab: ' + tabName);
+        }
+
+        // ============= OVERVIEW TAB =============
+        function displayOverview() {
+            var container = document.getElementById('recentJobs');
+
+            if (STATE.jobs.length === 0) {
+                container.innerHTML = '<div class="empty"><h2>📋 No Projects Yet</h2><p>Create projects using Field Capture or the Create Job tab.</p></div>';
+                return;
+            }
+
+            // Show last 5 jobs
+            var recent = STATE.jobs.slice(-5).reverse();
+            var html = '<div class="jobs-grid">';
+
+            for (var i = 0; i < recent.length; i++) {
+                html += renderJobCard(recent[i]);
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ============= ALL JOBS TAB =============
+        function displayAllJobs() {
+            var filtered = getFilteredJobs();
+            var container = document.getElementById('allJobsGrid');
+            var empty = document.getElementById('emptyJobs');
+
+            if (filtered.length === 0) {
+                container.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+
+            container.style.display = 'grid';
+            empty.style.display = 'none';
+
+            var html = '';
+            for (var i = 0; i < filtered.length; i++) {
+                html += renderJobCard(filtered[i]);
+            }
+            container.innerHTML = html;
+        }
+
+        function renderJobCard(job) {
+            var statusClass = 'status-' + job.status;
+            var statusLabel = job.status.replace('-', ' ').toUpperCase();
+
+            var notesHtml = '';
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                notesHtml = '<div class="notes"><strong>Voice Notes (' + job.voiceNotes.length + '):</strong>';
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    notesHtml += '<div class="note">' + (i+1) + '. ' + job.voiceNotes[i].transcription + '</div>';
+                }
+                notesHtml += '</div>';
+            }
+
+            var staffHtml = job.assignedTo ? '<div class="job-staff">👤 Assigned to: <strong>' + job.assignedTo + '</strong></div>' : '';
+
+            return '<div class="job">' +
+                '<div class="job-header">' +
+                    '<div class="job-ref">' + job.projectReference + '</div>' +
+                    '<div class="job-status ' + statusClass + '">' + statusLabel + '</div>' +
+                '</div>' +
+                '<div class="job-addr">📍 ' + job.address + '</div>' +
+                '<div class="job-meta">' +
+                    '<span>🎤 ' + (job.voiceNotes || []).length + ' notes</span>' +
+                    '<span>📅 ' + new Date(job.createdAt).toLocaleDateString() + '</span>' +
+                '</div>' +
+                staffHtml +
+                notesHtml +
+                '<div class="job-actions">' +
+                    '<button class="btn-primary btn-small" onclick="viewJobDetails(\'' + job.jobId + '\')">View Details</button>' +
+                    '<button class="btn-secondary btn-small" onclick="generateJobPDF(\'' + job.jobId + '\')">📄 PDF</button>' +
+                    '<button class="btn-warning btn-small" onclick="emailJob(\'' + job.jobId + '\')">✉️ Email</button>' +
+                    '<button class="btn-danger btn-small" onclick="deleteJob(\'' + job.jobId + '\')">Delete</button>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function getFilteredJobs() {
+            var search = document.getElementById('searchInput').value.toLowerCase();
+            var status = document.getElementById('filterStatus').value;
+            var staff = document.getElementById('filterStaff').value;
+
+            return STATE.jobs.filter(function(job) {
+                var matchSearch = !search ||
+                    job.projectReference.toLowerCase().includes(search) ||
+                    job.address.toLowerCase().includes(search);
+                var matchStatus = !status || job.status === status;
+                var matchStaff = !staff || job.assignedTo === staff;
+                return matchSearch && matchStatus && matchStaff;
+            });
+        }
+
+        function filterJobs() {
+            displayAllJobs();
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterStaff').value = '';
+            filterJobs();
+        }
+
+        // ============= CREATE JOB TAB =============
+        function createJob(e) {
+            e.preventDefault();
+
+            var job = {
+                jobId: 'job-' + Date.now(),
+                projectReference: document.getElementById('newJobRef').value.trim(),
+                address: document.getElementById('newJobAddr').value.trim(),
+                status: document.getElementById('newJobStatus').value,
+                assignedTo: document.getElementById('newJobStaff').value || null,
+                createdAt: new Date().toISOString(),
+                createdBy: STATE.user.name,
+                voiceNotes: [],
+                photos: [],
+                managerInputs: {
+                    notes: document.getElementById('newJobNotes').value.trim()
+                }
+            };
+
+            STATE.jobs.push(job);
+            localStorage.setItem('emg_all_jobs', JSON.stringify(STATE.jobs));
+
+            log('✅ Created job: ' + job.projectReference);
+            alert('✅ Job created successfully!');
+
+            // Reset form
+            document.getElementById('newJobRef').value = '';
+            document.getElementById('newJobAddr').value = '';
+            document.getElementById('newJobNotes').value = '';
+
+            // Refresh data
+            loadData();
+            switchTab('jobs');
+        }
+
+        // ============= REPORTS TAB =============
+        function populateDropdowns() {
+            // Populate report project dropdown
+            var reportSel = document.getElementById('reportProject');
+            reportSel.innerHTML = '<option value="">-- Select Project --</option>';
+            for (var i = 0; i < STATE.jobs.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = STATE.jobs[i].jobId;
+                opt.textContent = STATE.jobs[i].projectReference + ' - ' + STATE.jobs[i].address;
+                reportSel.appendChild(opt);
+            }
+
+            // Populate staff dropdowns
+            var staffDropdowns = ['newJobStaff', 'filterStaff'];
+            for (var i = 0; i < staffDropdowns.length; i++) {
+                var sel = document.getElementById(staffDropdowns[i]);
+                for (var j = 0; j < STATE.staffList.length; j++) {
+                    var opt = document.createElement('option');
+                    opt.value = STATE.staffList[j];
+                    opt.textContent = STATE.staffList[j];
+                    sel.appendChild(opt);
+                }
+            }
+        }
+
+        function updateReportPreview() {
+            var jobId = document.getElementById('reportProject').value;
+            var preview = document.getElementById('reportPreview');
+
+            if (!jobId) {
+                preview.style.display = 'none';
+                return;
+            }
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            if (!job) return;
+
+            var html = '<h2 style="color: #2C5F2D; margin-bottom: 10px;">EMG Energy Assessment Report</h2>' +
+                '<p><strong>Reference:</strong> ' + job.projectReference + '</p>' +
+                '<p><strong>Address:</strong> ' + job.address + '</p>' +
+                '<p><strong>Date:</strong> ' + new Date(job.createdAt).toLocaleDateString() + '</p>' +
+                '<p><strong>Status:</strong> ' + job.status.toUpperCase() + '</p>';
+
+            if (job.assignedTo) {
+                html += '<p><strong>Field Officer:</strong> ' + job.assignedTo + '</p>';
+            }
+
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                html += '<h3 style="margin-top: 20px; color: #2C5F2D;">Field Notes:</h3><ol>';
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    html += '<li style="margin: 5px 0;">' + job.voiceNotes[i].transcription + '</li>';
+                }
+                html += '</ol>';
+            }
+
+            document.getElementById('reportContent').innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        function generatePDF() {
+            var jobId = document.getElementById('reportProject').value;
+            if (!jobId) {
+                alert('❌ Select a project first');
+                return;
+            }
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            alert('📄 PDF Generation\n\nIn production, this would generate a PDF report for:\n\n' +
+                  job.projectReference + '\n' + job.address + '\n\n' +
+                  'PDF would include all field notes, photos, and compliance data.');
+            log('📄 PDF generated for: ' + job.projectReference);
+        }
+
+        function generateJobPDF(jobId) {
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            if (!job) return;
+            alert('📄 Generating PDF for ' + job.projectReference);
+            log('📄 PDF generated for: ' + job.projectReference);
+        }
+
+        function sendEmail() {
+            var jobId = document.getElementById('reportProject').value;
+            if (!jobId) {
+                alert('❌ Select a project first');
+                return;
+            }
+
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            var recipient = prompt('Enter recipient email address:');
+            if (!recipient) return;
+
+            // Create mailto link
+            var subject = 'EMG Energy Report - ' + job.projectReference;
+            var body = 'Dear Sir/Madam,\n\nPlease find attached the building assessment report for:\n\n' +
+                       'Reference: ' + job.projectReference + '\n' +
+                       'Address: ' + job.address + '\n' +
+                       'Date: ' + new Date(job.createdAt).toLocaleDateString() + '\n\n' +
+                       'Best regards,\n' + STATE.user.name + '\nEMG Energy';
+
+            window.location.href = 'mailto:' + recipient + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+            log('✉️ Email opened for: ' + job.projectReference);
+        }
+
+        function emailJob(jobId) {
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            if (!job) return;
+
+            var recipient = prompt('Enter recipient email address:');
+            if (!recipient) return;
+
+            var subject = 'EMG Energy Report - ' + job.projectReference;
+            var body = 'Project: ' + job.projectReference + '\nAddress: ' + job.address;
+            window.location.href = 'mailto:' + recipient + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+        }
+
+        function viewJobDetails(jobId) {
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            if (!job) return;
+
+            var notes = '';
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    notes += '\n' + (i+1) + '. ' + job.voiceNotes[i].transcription;
+                }
+            } else {
+                notes = '\nNo notes recorded';
+            }
+
+            alert('📋 Job Details\n\n' +
+                  'Reference: ' + job.projectReference + '\n' +
+                  'Address: ' + job.address + '\n' +
+                  'Status: ' + job.status.toUpperCase() + '\n' +
+                  'Created: ' + new Date(job.createdAt).toLocaleDateString() + '\n' +
+                  'Assigned: ' + (job.assignedTo || 'Unassigned') + '\n' +
+                  '\nVoice Notes:' + notes);
+        }
+
+        function deleteJob(jobId) {
+            if (!confirm('⚠️ Delete this project? This cannot be undone.')) return;
+
+            STATE.jobs = STATE.jobs.filter(function(j) { return j.jobId !== jobId; });
+            localStorage.setItem('emg_all_jobs', JSON.stringify(STATE.jobs));
+
+            log('🗑️ Deleted job: ' + jobId);
+            loadData();
+        }
+
+        // ============= AUTO REFRESH =============
+        setInterval(function() {
+            var before = STATE.jobs.length;
+            var data = localStorage.getItem('emg_all_jobs');
+            STATE.jobs = data ? JSON.parse(data) : [];
+
+            if (STATE.jobs.length !== before) {
+                log('🔄 Data refreshed (' + STATE.jobs.length + ' jobs)');
+                loadData();
+            }
+        }, 5000);
+
+        // ============= INIT =============
+        log('🚀 Dashboard v1 loading...');
+        init();
+    </script>
+</body>
+</html>
