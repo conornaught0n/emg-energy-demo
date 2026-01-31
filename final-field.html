@@ -6,6 +6,7 @@
     <title>EMG Surveyor Mode - Professional Survey System</title>
     <script src="job-types-config.js"></script>
     <script src="ai-processor.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial; background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); min-height: 100vh; padding: 20px; }
@@ -48,8 +49,9 @@
         .missing-items ul { margin: 0 0 0 20px; color: #856404; font-size: 13px; }
 
         /* Photo Styles */
-        .photo-preview { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; }
-        .photo-preview img { width: 100%; height: 100px; object-fit: cover; }
+        #photosPreview { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; }
+        .photo-preview { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; aspect-ratio: 4/3; }
+        .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .photo-delete { position: absolute; top: 5px; right: 5px; background: #f44336; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; }
         .btn-secondary { background: #2196F3; color: white; }
     </style>
@@ -406,29 +408,166 @@
 
             var reader = new FileReader();
             reader.onload = function(e) {
-                var photoData = e.target.result;
+                var img = new Image();
+                img.onload = function() {
+                    // Compress image using canvas
+                    var maxWidth = 1200;
+                    var maxHeight = 1200;
+                    var width = img.width;
+                    var height = img.height;
 
-                // Limit photo size to prevent localStorage quota issues
-                if (photoData.length > 500000) { // ~500KB limit per photo
-                    alert('⚠️ Photo too large! Please use a smaller image or reduce quality.');
-                    return;
-                }
+                    // Calculate new dimensions
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
 
-                var photo = {
-                    id: 'photo-' + Date.now(),
-                    data: photoData,
-                    timestamp: new Date().toISOString(),
-                    type: 'equipment' // or 'clipboard'
+                    // Create canvas and compress
+                    var canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to compressed JPEG (quality: 0.7 = 70%)
+                    var compressedData = canvas.toDataURL('image/jpeg', 0.7);
+
+                    log('📷 Photo compressed: ' + Math.round(e.target.result.length / 1024) + 'KB → ' + Math.round(compressedData.length / 1024) + 'KB');
+
+                    var photo = {
+                        id: 'photo-' + Date.now(),
+                        data: compressedData,
+                        timestamp: new Date().toISOString(),
+                        type: 'equipment',
+                        extracted: null // Will store OCR text
+                    };
+
+                    STATE.photos.push(photo);
+                    log('📷 Photo added (' + STATE.photos.length + ' total)');
+                    displayPhotos();
+                    updateUI();
+
+                    // Attempt OCR text extraction in background
+                    extractTextFromPhoto(photo, compressedData);
                 };
-
-                STATE.photos.push(photo);
-                log('📷 Photo added (' + STATE.photos.length + ' total)');
-                displayPhotos();
-                updateUI();
+                img.src = e.target.result;
             };
 
             reader.readAsDataURL(file);
             event.target.value = '';
+        }
+
+        function extractTextFromPhoto(photo, imageData) {
+            // Use Tesseract.js for real OCR text extraction
+            log('🔍 Analyzing photo with OCR (this may take 10-15 seconds)...');
+
+            if (!window.Tesseract) {
+                log('⚠️ OCR library not loaded, skipping text extraction');
+                return;
+            }
+
+            Tesseract.recognize(
+                imageData,
+                'eng',
+                {
+                    logger: function(m) {
+                        if (m.status === 'recognizing text') {
+                            var percent = Math.round(m.progress * 100);
+                            if (percent % 20 === 0) { // Log every 20%
+                                log('📊 OCR Progress: ' + percent + '%');
+                            }
+                        }
+                    }
+                }
+            ).then(function(result) {
+                var extractedText = result.data.text.trim();
+
+                if (extractedText.length > 10) {
+                    log('✅ OCR Complete: Found ' + extractedText.length + ' characters');
+
+                    // Process extracted text for BER-relevant data
+                    var processedData = processExtractedText(extractedText);
+
+                    photo.extracted = processedData;
+
+                    // Create a voice note from extracted text
+                    var timestamp = new Date(photo.timestamp).toLocaleTimeString();
+                    var autoNote = {
+                        id: 'ocr-' + Date.now(),
+                        transcription: '[OCR from Photo ' + timestamp + '] ' + processedData,
+                        captured_at: photo.timestamp,
+                        source: 'ocr'
+                    };
+
+                    STATE.notes.push(autoNote);
+
+                    // Analyze extracted text with AI
+                    if (STATE.jobType && window.AI_PROCESSOR) {
+                        var matches = AI_PROCESSOR.analyzeVoiceNote(processedData, STATE.jobType);
+                        for (var i = 0; i < matches.length; i++) {
+                            var key = matches[i].itemId;
+                            if (!STATE.checkedItems[key] || STATE.checkedItems[key].confidence < matches[i].confidence) {
+                                STATE.checkedItems[key] = {
+                                    checked: true,
+                                    confidence: matches[i].confidence,
+                                    source: 'ocr'
+                                };
+                            }
+                        }
+                        displayChecklist();
+                    }
+
+                    log('📋 OCR text analyzed and added to survey data');
+                    alert('✅ Photo Text Extracted!\n\nFound equipment data in photo:\n' + processedData.substring(0, 150) + '...\n\nData has been analyzed and added to survey notes.');
+                } else {
+                    log('ℹ️ OCR found minimal text in photo');
+                    photo.extracted = '[No readable text found in photo]';
+                }
+            }).catch(function(err) {
+                log('❌ OCR Error: ' + err.message);
+                photo.extracted = '[OCR failed - manual review required]';
+            });
+        }
+
+        function processExtractedText(rawText) {
+            // Clean and process OCR text to extract BER-relevant information
+            var processed = rawText;
+
+            // Remove excessive whitespace and line breaks
+            processed = processed.replace(/\s+/g, ' ').trim();
+
+            // Look for common equipment data patterns
+            var keywords = {
+                boiler: ['boiler', 'worcester', 'vaillant', 'ideal', 'baxi', 'combi', 'condensing', 'kw', 'kilowatt'],
+                efficiency: ['efficiency', 'sedbuk', 'erp', 'rating', 'class', 'grade'],
+                temperature: ['°c', 'degrees', 'temp', 'temperature', 'flow', 'return'],
+                insulation: ['mm', 'millimeter', 'thickness', 'insulation', 'mineral wool', 'cavity', 'u-value'],
+                controls: ['thermostat', 'timer', 'programmer', 'trv', 'valve', 'control'],
+                serial: ['serial', 'model', 'type', 'reference', 'product']
+            };
+
+            var identified = [];
+            for (var category in keywords) {
+                for (var i = 0; i < keywords[category].length; i++) {
+                    if (processed.toLowerCase().indexOf(keywords[category][i]) !== -1) {
+                        identified.push(category);
+                        break;
+                    }
+                }
+            }
+
+            if (identified.length > 0) {
+                processed = 'Equipment data detected: ' + identified.join(', ') + '. ' + processed;
+            }
+
+            return processed;
         }
 
         function displayPhotos() {
@@ -440,8 +579,13 @@
 
             var html = '';
             for (var i = 0; i < STATE.photos.length; i++) {
+                var ocrBadge = '';
+                if (STATE.photos[i].extracted && STATE.photos[i].extracted !== '[OCR failed - manual review required]' && STATE.photos[i].extracted !== '[No readable text found in photo]') {
+                    ocrBadge = '<span style="position: absolute; top: 5px; left: 5px; background: #2c5f2d; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.7em;">📋 OCR</span>';
+                }
                 html += '<div class="photo-preview">' +
                     '<img src="' + STATE.photos[i].data + '" alt="Photo ' + (i+1) + '">' +
+                    ocrBadge +
                     '<button class="photo-delete" onclick="deletePhoto(' + i + ')">&times;</button>' +
                     '</div>';
             }
