@@ -54,13 +54,40 @@
         .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .photo-delete { position: absolute; top: 5px; right: 5px; background: #f44336; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; }
         .btn-secondary { background: #2196F3; color: white; }
+
+        /* Navigation Toolbar */
+        .nav-toolbar { background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100; }
+        .nav-left { display: flex; align-items: center; gap: 15px; }
+        .hamburger { cursor: pointer; display: flex; flex-direction: column; gap: 4px; padding: 5px; }
+        .hamburger div { width: 25px; height: 3px; background: white; border-radius: 3px; transition: 0.3s; }
+        .hamburger:hover div { background: #4CAF50; }
+        .nav-logo { height: 35px; cursor: pointer; transition: 0.3s; }
+        .nav-logo:hover { opacity: 0.8; transform: scale(1.05); }
+        .nav-menu { position: absolute; top: 60px; left: 10px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: none; min-width: 200px; z-index: 1000; }
+        .nav-menu.active { display: block; }
+        .nav-menu a { display: block; padding: 12px 20px; color: #333; text-decoration: none; border-bottom: 1px solid #eee; transition: 0.2s; }
+        .nav-menu a:last-child { border-bottom: none; }
+        .nav-menu a:hover { background: #f8f9fa; color: #2C5F2D; padding-left: 25px; }
+        .nav-title { font-size: 16px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="card" style="text-align: center;">
-        <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" style="height: 40px;">
-        <h1 style="margin: 10px 0;">Surveyor Mode</h1>
-        <p style="font-size: 14px; opacity: 0.9; margin: 0;">Professional On-Site Survey System</p>
+    <!-- Navigation Toolbar -->
+    <div class="nav-toolbar">
+        <div class="nav-left">
+            <div class="hamburger" onclick="toggleMenu()">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy" class="nav-logo" onclick="window.location.href='index.html'" title="Go to Home">
+            <div class="nav-title">Surveyor Mode</div>
+        </div>
+        <div class="nav-menu" id="navMenu">
+            <a href="index.html">🏠 Home</a>
+            <a href="final-field.html">📋 Surveyor Mode</a>
+            <a href="manager-dashboard.html">📊 Manager Dashboard</a>
+        </div>
     </div>
 
     <div class="card">
@@ -731,6 +758,23 @@
         loadProjs();
         updateUI();
         log('✅ Ready');
+
+        // Navigation menu toggle
+        function toggleMenu() {
+            var menu = document.getElementById('navMenu');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            var menu = document.getElementById('navMenu');
+            var hamburger = event.target.closest('.hamburger');
+            if (menu && !hamburger && !event.target.closest('.nav-menu')) {
+                menu.classList.remove('active');
+            }
+        });
     </script>
 </body>
 </html>
