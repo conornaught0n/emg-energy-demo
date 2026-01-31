@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>EMG Energy - Manager Dashboard v1</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial; background: #f5f7fa; }
@@ -394,9 +395,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeJobModal()">Cancel</button>
+                <button class="btn-secondary" onclick="generateJobPDF(STATE.currentJob.jobId)">📄 Download PDF</button>
+                <button class="btn-secondary" onclick="printJobPDF(STATE.currentJob.jobId)">🖨️ Print</button>
+                <button class="btn-secondary" onclick="emailJob(STATE.currentJob.jobId)">✉️ Email</button>
                 <button class="btn-success" onclick="saveJobChanges()">💾 Save Changes</button>
-                <button class="btn-danger" onclick="deleteJobFromModal()">🗑️ Delete Job</button>
+                <button class="btn-warning" onclick="closeJobModal()">Cancel</button>
+                <button class="btn-danger" onclick="deleteJobFromModal()">🗑️ Delete</button>
             </div>
         </div>
     </div>
@@ -602,10 +606,11 @@
                 staffHtml +
                 notesHtml +
                 '<div class="job-actions">' +
-                    '<button class="btn-primary btn-small" onclick="viewJobDetails(\'' + job.jobId + '\')">View Details</button>' +
+                    '<button class="btn-primary btn-small" onclick="viewJobDetails(\'' + job.jobId + '\')">📋 View/Edit</button>' +
                     '<button class="btn-secondary btn-small" onclick="generateJobPDF(\'' + job.jobId + '\')">📄 PDF</button>' +
+                    '<button class="btn-success btn-small" onclick="printJobPDF(\'' + job.jobId + '\')">🖨️ Print</button>' +
                     '<button class="btn-warning btn-small" onclick="emailJob(\'' + job.jobId + '\')">✉️ Email</button>' +
-                    '<button class="btn-danger btn-small" onclick="deleteJob(\'' + job.jobId + '\')">Delete</button>' +
+                    '<button class="btn-danger btn-small" onclick="deleteJob(\'' + job.jobId + '\')">🗑️ Delete</button>' +
                 '</div>' +
             '</div>';
         }
@@ -738,17 +743,186 @@
             }
 
             var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
-            alert('📄 PDF Generation\n\nIn production, this would generate a PDF report for:\n\n' +
-                  job.projectReference + '\n' + job.address + '\n\n' +
-                  'PDF would include all field notes, photos, and compliance data.');
-            log('📄 PDF generated for: ' + job.projectReference);
+            generateJobPDF(job.jobId);
         }
 
         function generateJobPDF(jobId) {
             var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
             if (!job) return;
-            alert('📄 Generating PDF for ' + job.projectReference);
-            log('📄 PDF generated for: ' + job.projectReference);
+
+            try {
+                var { jsPDF } = window.jspdf;
+                var doc = new jsPDF();
+
+                // Header
+                doc.setFontSize(20);
+                doc.setTextColor(44, 95, 45); // EMG Green
+                doc.text('EMG Energy Assessment Report', 20, 20);
+
+                // Line under header
+                doc.setDrawColor(44, 95, 45);
+                doc.setLineWidth(0.5);
+                doc.line(20, 25, 190, 25);
+
+                // Project Information
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                var y = 35;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Project Reference:', 20, y);
+                doc.setFont(undefined, 'normal');
+                doc.text(job.projectReference, 70, y);
+                y += 8;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Address:', 20, y);
+                doc.setFont(undefined, 'normal');
+                var addressLines = doc.splitTextToSize(job.address, 120);
+                doc.text(addressLines, 70, y);
+                y += (addressLines.length * 6) + 2;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Date:', 20, y);
+                doc.setFont(undefined, 'normal');
+                doc.text(new Date(job.createdAt).toLocaleDateString(), 70, y);
+                y += 8;
+
+                doc.setFont(undefined, 'bold');
+                doc.text('Status:', 20, y);
+                doc.setFont(undefined, 'normal');
+                doc.text(job.status.toUpperCase(), 70, y);
+                y += 8;
+
+                if (job.assignedTo) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Field Officer:', 20, y);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(job.assignedTo, 70, y);
+                    y += 8;
+                }
+
+                // Voice Notes Section
+                if (job.voiceNotes && job.voiceNotes.length > 0) {
+                    y += 5;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('Field Notes:', 20, y);
+                    y += 8;
+
+                    doc.setFontSize(11);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont(undefined, 'normal');
+
+                    for (var i = 0; i < job.voiceNotes.length; i++) {
+                        // Check if we need a new page
+                        if (y > 270) {
+                            doc.addPage();
+                            y = 20;
+                        }
+
+                        var noteText = (i + 1) + '. ' + job.voiceNotes[i].transcription;
+                        var noteLines = doc.splitTextToSize(noteText, 170);
+                        doc.text(noteLines, 25, y);
+                        y += (noteLines.length * 5) + 3;
+                    }
+                }
+
+                // Manager Notes
+                if (job.managerInputs && job.managerInputs.notes) {
+                    if (y > 250) {
+                        doc.addPage();
+                        y = 20;
+                    }
+
+                    y += 5;
+                    doc.setFontSize(14);
+                    doc.setFont(undefined, 'bold');
+                    doc.setTextColor(44, 95, 45);
+                    doc.text('Manager Notes:', 20, y);
+                    y += 8;
+
+                    doc.setFontSize(11);
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFont(undefined, 'normal');
+                    var managerLines = doc.splitTextToSize(job.managerInputs.notes, 170);
+                    doc.text(managerLines, 20, y);
+                    y += (managerLines.length * 5) + 5;
+                }
+
+                // Footer
+                doc.setFontSize(9);
+                doc.setTextColor(128, 128, 128);
+                var pageCount = doc.internal.getNumberOfPages();
+                for (var i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.text('EMG Energy Consultants | info@emgenergy.ie | 065 672 9090', 105, 285, { align: 'center' });
+                    doc.text('Page ' + i + ' of ' + pageCount, 190, 285, { align: 'right' });
+                }
+
+                // Save PDF
+                var fileName = job.projectReference.replace(/[^a-z0-9]/gi, '_') + '_Report.pdf';
+                doc.save(fileName);
+
+                log('✅ PDF downloaded: ' + fileName);
+                alert('✅ PDF Downloaded!\n\nFile: ' + fileName + '\n\nCheck your Downloads folder.');
+
+            } catch(err) {
+                log('❌ PDF Error: ' + err.message);
+                alert('❌ PDF Generation Error\n\n' + err.message + '\n\nPlease try again or contact support.');
+            }
+        }
+
+        function printJobPDF(jobId) {
+            var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
+            if (!job) return;
+
+            // Open print dialog for the job
+            var printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>' + job.projectReference + ' - Print</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: Arial; padding: 40px; }');
+            printWindow.document.write('h1 { color: #2C5F2D; }');
+            printWindow.document.write('h2 { color: #2C5F2D; margin-top: 30px; }');
+            printWindow.document.write('.info { margin: 10px 0; }');
+            printWindow.document.write('.label { font-weight: bold; display: inline-block; width: 150px; }');
+            printWindow.document.write('.note { margin: 10px 0; padding-left: 20px; }');
+            printWindow.document.write('</style></head><body>');
+
+            printWindow.document.write('<h1>EMG Energy Assessment Report</h1>');
+            printWindow.document.write('<div class="info"><span class="label">Project Reference:</span> ' + job.projectReference + '</div>');
+            printWindow.document.write('<div class="info"><span class="label">Address:</span> ' + job.address + '</div>');
+            printWindow.document.write('<div class="info"><span class="label">Date:</span> ' + new Date(job.createdAt).toLocaleDateString() + '</div>');
+            printWindow.document.write('<div class="info"><span class="label">Status:</span> ' + job.status.toUpperCase() + '</div>');
+            if (job.assignedTo) {
+                printWindow.document.write('<div class="info"><span class="label">Field Officer:</span> ' + job.assignedTo + '</div>');
+            }
+
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                printWindow.document.write('<h2>Field Notes</h2>');
+                for (var i = 0; i < job.voiceNotes.length; i++) {
+                    printWindow.document.write('<div class="note">' + (i+1) + '. ' + job.voiceNotes[i].transcription + '</div>');
+                }
+            }
+
+            if (job.managerInputs && job.managerInputs.notes) {
+                printWindow.document.write('<h2>Manager Notes</h2>');
+                printWindow.document.write('<div>' + job.managerInputs.notes + '</div>');
+            }
+
+            printWindow.document.write('<hr style="margin-top: 50px;">');
+            printWindow.document.write('<p style="text-align: center; color: #666; font-size: 12px;">EMG Energy Consultants | info@emgenergy.ie | 065 672 9090</p>');
+            printWindow.document.write('</body></html>');
+
+            printWindow.document.close();
+            printWindow.focus();
+
+            setTimeout(function() {
+                printWindow.print();
+            }, 500);
+
+            log('🖨️ Print dialog opened for: ' + job.projectReference);
         }
 
         function sendEmail() {
