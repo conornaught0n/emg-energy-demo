@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Field - REAL WORKING</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 15px 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        h2 { color: #2C5F2D; margin-bottom: 15px; font-size: 20px; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; margin: 8px 0; font-size: 16px; }
+        button { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin: 5px 0; }
+        .btn-create { background: #2C5F2D; color: white; }
+        .btn-record { background: #2196F3; color: white; }
+        .btn-record.recording { background: #D32F2F; animation: pulse 1s infinite; }
+        .btn-save { background: #FF9800; color: white; }
+        .btn-view { background: #9C27B0; color: white; }
+        .btn-clear { background: #666; color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+
+        .status { background: #e8f5e9; border: 3px solid #4CAF50; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
+        .warning { background: #fff3cd; border: 2px solid #FF9800; padding: 15px; border-radius: 8px; text-align: center; }
+
+        .transcription-box { background: #f5f5f5; border: 3px solid #2196F3; padding: 15px; border-radius: 8px; margin: 10px 0; min-height: 100px; display: none; }
+        .transcription-box.active { display: block; border-color: #D32F2F; background: #ffebee; animation: pulse 1s infinite; }
+        .transcription-text { font-size: 18px; font-weight: bold; color: #333; min-height: 60px; }
+
+        .notes-list { margin: 15px 0; }
+        .note-item { background: #f9f9f9; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #4CAF50; }
+        .note-num { font-weight: bold; color: #2C5F2D; font-size: 14px; }
+        .note-text { color: #333; margin-top: 5px; font-size: 15px; }
+        .note-time { color: #999; font-size: 11px; margin-top: 5px; }
+
+        .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .count { background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
+        .count-num { font-size: 32px; font-weight: bold; color: #2C5F2D; }
+        .count-label { font-size: 12px; color: #666; }
+
+        #console { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto; border-radius: 8px; }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card" style="text-align: center;">
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" style="height: 40px;">
+            <div style="color: #666; margin-top: 10px; font-weight: bold;">REAL WORKING VERSION</div>
+        </div>
+
+        <!-- PROJECT -->
+        <div class="card">
+            <h2>📋 STEP 1: Project</h2>
+            <select id="projectSelector"></select>
+            <div style="text-align: center; margin: 10px 0; color: #666;">OR</div>
+            <input type="text" id="addressInput" placeholder="Enter property address">
+            <button class="btn-create" onclick="createProject()">➕ CREATE PROJECT</button>
+
+            <div id="statusBox" class="status">
+                <strong>✅ ACTIVE PROJECT</strong><br>
+                <span id="statusRef" style="font-size: 18px; font-weight: bold;"></span><br>
+                <span id="statusAddr"></span>
+            </div>
+            <div id="warningBox" class="warning">⚠️ Create or select a project first</div>
+        </div>
+
+        <!-- VOICE RECORDING -->
+        <div class="card">
+            <h2>🎤 STEP 2: Voice Notes (Auto-Transcribe)</h2>
+
+            <div class="transcription-box" id="transcriptionBox">
+                <div style="color: #D32F2F; font-weight: bold; margin-bottom: 10px;">🔴 RECORDING...</div>
+                <div class="transcription-text" id="transcriptionText">Listening...</div>
+            </div>
+
+            <button class="btn-record" id="recordBtn" onclick="toggleRecording()">
+                🎤 CLICK TO RECORD
+            </button>
+
+            <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 13px;">
+                💡 <strong>How it works:</strong> Click button, speak (e.g. "Bedroom, 50% humidity, 18 degrees"), click to stop.
+                Transcription happens automatically - no typing needed!
+            </div>
+
+            <div class="counts">
+                <div class="count">
+                    <div class="count-num" id="voiceCount">0</div>
+                    <div class="count-label">Voice Notes</div>
+                </div>
+                <div class="count">
+                    <div class="count-num" id="projectCount">0</div>
+                    <div class="count-label">Saved Projects</div>
+                </div>
+            </div>
+
+            <h3 style="color: #2C5F2D; margin: 15px 0 10px 0; font-size: 16px;">📝 Captured Notes:</h3>
+            <div id="notesList" class="notes-list"></div>
+        </div>
+
+        <!-- SAVE -->
+        <div class="card">
+            <h2>💾 STEP 3: Save</h2>
+            <button class="btn-save" id="saveBtn" onclick="saveData()">💾 SAVE TO DASHBOARD</button>
+            <button class="btn-view" onclick="window.location.href='dash-working.html'">📊 VIEW DASHBOARD</button>
+            <button class="btn-clear" onclick="clearAll()">🗑️ CLEAR ALL</button>
+        </div>
+
+        <!-- DEBUG -->
+        <div class="card">
+            <h2>🔧 Debug Log</h2>
+            <div id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            projectId: null,
+            projectRef: null,
+            address: '',
+            voiceNotes: [],
+            isRecording: false,
+            recognition: null,
+            currentTranscript: ''
+        };
+
+        function log(msg) {
+            const t = new Date().toLocaleTimeString();
+            console.log(msg);
+            document.getElementById('console').innerHTML += `[${t}] ${msg}\n`;
+            document.getElementById('console').scrollTop = 999999;
+        }
+
+        log('🚀 App started - Real speech-to-text version');
+
+        // Check browser support
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('⚠️ Speech recognition not supported!\n\nPlease use Chrome or Edge browser.');
+            log('❌ Speech API not available');
+        } else {
+            log('✅ Speech API available');
+        }
+
+        function createProject() {
+            log('▶️ createProject()');
+            const addr = document.getElementById('addressInput').value.trim();
+            if (!addr) {
+                alert('❌ Enter address!');
+                return;
+            }
+
+            state.projectId = 'proj-' + Date.now();
+            state.projectRef = 'EMG-2026-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            state.address = addr;
+            state.voiceNotes = [];
+
+            log('✅ Created: ' + state.projectRef);
+            updateUI();
+        }
+
+        function toggleRecording() {
+            if (!state.projectId) {
+                alert('❌ Create a project first!');
+                return;
+            }
+
+            if (state.isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            log('🎤 Starting recording with speech recognition...');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            state.recognition = new SpeechRecognition();
+            state.recognition.continuous = false;  // Stop after speaking
+            state.recognition.interimResults = true;
+            state.recognition.lang = 'en-IE';
+
+            const transcriptionBox = document.getElementById('transcriptionBox');
+            const transcriptionText = document.getElementById('transcriptionText');
+            const recordBtn = document.getElementById('recordBtn');
+
+            transcriptionBox.classList.add('active');
+            recordBtn.classList.add('recording');
+            recordBtn.textContent = '⏹️ CLICK TO STOP';
+            state.isRecording = true;
+            state.currentTranscript = '';
+
+            transcriptionText.textContent = 'Listening... Speak now!';
+
+            state.recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                state.currentTranscript = transcript.trim();
+                transcriptionText.textContent = state.currentTranscript || 'Listening...';
+                log('📝 Transcribing: ' + state.currentTranscript.substring(0, 50));
+            };
+
+            state.recognition.onerror = (event) => {
+                log('❌ Speech error: ' + event.error);
+                if (event.error === 'not-allowed') {
+                    alert('❌ Microphone access denied!\n\nPlease allow microphone access in browser settings.');
+                }
+                stopRecording();
+            };
+
+            state.recognition.onend = () => {
+                log('⏹️ Recording ended');
+                if (state.isRecording) {
+                    // Auto-save when speech stops
+                    if (state.currentTranscript) {
+                        saveVoiceNote();
+                    }
+                    stopRecording();
+                }
+            };
+
+            try {
+                state.recognition.start();
+                log('✅ Speech recognition started');
+            } catch (err) {
+                log('❌ Failed to start: ' + err.message);
+                alert('❌ Failed to start recording: ' + err.message);
+                stopRecording();
+            }
+        }
+
+        function stopRecording() {
+            if (state.recognition) {
+                state.recognition.stop();
+                state.recognition = null;
+            }
+
+            const transcriptionBox = document.getElementById('transcriptionBox');
+            const recordBtn = document.getElementById('recordBtn');
+
+            transcriptionBox.classList.remove('active');
+            recordBtn.classList.remove('recording');
+            recordBtn.textContent = '🎤 CLICK TO RECORD';
+            state.isRecording = false;
+
+            log('⏹️ Recording stopped');
+        }
+
+        function saveVoiceNote() {
+            if (!state.currentTranscript) {
+                log('⚠️ No transcription to save');
+                return;
+            }
+
+            const note = {
+                id: 'vn-' + Date.now(),
+                transcription: state.currentTranscript,
+                captured_at: new Date().toISOString(),
+                confidence: 0.95
+            };
+
+            state.voiceNotes.push(note);
+            log('✅ Saved note #' + state.voiceNotes.length + ': ' + state.currentTranscript);
+
+            state.currentTranscript = '';
+            updateUI();
+        }
+
+        function displayNotes() {
+            const list = document.getElementById('notesList');
+            if (state.voiceNotes.length === 0) {
+                list.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No notes yet. Click record to add notes.</div>';
+                return;
+            }
+
+            list.innerHTML = state.voiceNotes.map((note, i) => `
+                <div class="note-item">
+                    <div class="note-num">Note ${i + 1}</div>
+                    <div class="note-text">${note.transcription}</div>
+                    <div class="note-time">${new Date(note.captured_at).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        function saveData() {
+            log('▶️ saveData()');
+            if (!state.projectId) {
+                alert('❌ Create project first!');
+                return;
+            }
+
+            if (state.voiceNotes.length === 0) {
+                alert('⚠️ No voice notes to save!');
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            btn.textContent = '⏳ SAVING...';
+            btn.disabled = true;
+
+            try {
+                const jobData = {
+                    jobId: state.projectId,
+                    projectReference: state.projectRef,
+                    address: state.address,
+                    createdAt: new Date().toISOString(),
+                    status: 'in-progress',
+                    voiceNotes: state.voiceNotes,
+                    photos: [],
+                    managerInputs: {}
+                };
+
+                let jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                const idx = jobs.findIndex(j => j.jobId === state.projectId);
+
+                if (idx >= 0) {
+                    jobs[idx] = jobData;
+                    log('📝 Updated existing job');
+                } else {
+                    jobs.push(jobData);
+                    log('➕ Added new job');
+                }
+
+                localStorage.setItem('emg_all_jobs', JSON.stringify(jobs));
+
+                log('✅ SAVED! Total jobs: ' + jobs.length);
+                log('   Voice notes: ' + state.voiceNotes.length);
+
+                btn.textContent = '✅ SAVED!';
+                setTimeout(() => {
+                    btn.textContent = '💾 SAVE TO DASHBOARD';
+                    btn.disabled = false;
+                }, 2000);
+
+                loadProjects();
+
+            } catch (err) {
+                log('❌ Save failed: ' + err.message);
+                alert('❌ Save failed: ' + err.message);
+                btn.textContent = '💾 SAVE TO DASHBOARD';
+                btn.disabled = false;
+            }
+        }
+
+        function loadProjects() {
+            const sel = document.getElementById('projectSelector');
+            sel.innerHTML = '<option value="">-- Select Existing Project --</option>';
+
+            try {
+                const jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+
+                jobs.forEach(j => {
+                    const opt = document.createElement('option');
+                    opt.value = j.jobId;
+                    opt.textContent = `${j.projectReference} - ${j.address} (${j.voiceNotes.length} notes)`;
+                    sel.appendChild(opt);
+                });
+
+                sel.onchange = () => {
+                    const job = jobs.find(j => j.jobId === sel.value);
+                    if (job) {
+                        state.projectId = job.jobId;
+                        state.projectRef = job.projectReference;
+                        state.address = job.address;
+                        state.voiceNotes = job.voiceNotes || [];
+                        document.getElementById('addressInput').value = job.address;
+                        log('✅ Loaded: ' + job.projectReference);
+                        updateUI();
+                    }
+                };
+
+                document.getElementById('projectCount').textContent = jobs.length;
+                log('📋 Loaded ' + jobs.length + ' projects');
+
+            } catch (err) {
+                log('❌ Error loading projects: ' + err.message);
+            }
+        }
+
+        function clearAll() {
+            if (!confirm('⚠️ Clear ALL data?')) return;
+            localStorage.clear();
+            state = { projectId: null, projectRef: null, address: '', voiceNotes: [], isRecording: false, recognition: null, currentTranscript: '' };
+            document.getElementById('addressInput').value = '';
+            loadProjects();
+            updateUI();
+            log('🗑️ All data cleared');
+        }
+
+        function updateUI() {
+            document.getElementById('voiceCount').textContent = state.voiceNotes.length;
+
+            const status = document.getElementById('statusBox');
+            const warning = document.getElementById('warningBox');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (state.projectId) {
+                status.style.display = 'block';
+                warning.style.display = 'none';
+                document.getElementById('statusRef').textContent = state.projectRef;
+                document.getElementById('statusAddr').textContent = state.address;
+
+                if (state.voiceNotes.length > 0) {
+                    saveBtn.textContent = `💾 SAVE (${state.voiceNotes.length} notes)`;
+                    saveBtn.disabled = false;
+                } else {
+                    saveBtn.textContent = '💾 SAVE TO DASHBOARD';
+                    saveBtn.disabled = true;
+                }
+            } else {
+                status.style.display = 'none';
+                warning.style.display = 'block';
+                saveBtn.textContent = '⚠️ CREATE PROJECT FIRST';
+                saveBtn.disabled = true;
+            }
+
+            displayNotes();
+        }
+
+        // Initialize
+        loadProjects();
+        updateUI();
+    </script>
+</body>
+</html>

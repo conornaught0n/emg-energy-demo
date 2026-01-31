@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG Dashboard - WORKING</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f7fa; min-height: 100vh; }
+
+        .header { background: #2C5F2D; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header img { height: 35px; }
+        .header-title { font-size: 24px; font-weight: bold; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-num { font-size: 36px; font-weight: bold; color: #2C5F2D; }
+        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
+
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .job-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .job-card:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.15); }
+
+        .job-ref { font-size: 20px; font-weight: bold; color: #2C5F2D; margin-bottom: 10px; }
+        .job-address { color: #666; margin-bottom: 15px; font-size: 14px; }
+        .job-meta { display: flex; gap: 15px; font-size: 13px; color: #666; margin-bottom: 15px; }
+
+        .voice-notes-preview { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        .voice-note-item { padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+        .voice-note-item:last-child { border-bottom: none; }
+        .voice-note-num { font-weight: bold; color: #2C5F2D; font-size: 12px; }
+        .voice-note-text { color: #333; font-size: 14px; margin-top: 3px; }
+
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-primary { background: #2C5F2D; color: white; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-danger { background: #D32F2F; color: white; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+        .empty-state h2 { color: #2C5F2D; margin-bottom: 15px; }
+
+        #console { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; max-height: 150px; overflow-y: auto; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy">
+            <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Manager Dashboard - WORKING</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-secondary" onclick="window.location.href='field-working.html'">🎤 Field Capture</button>
+            <button class="btn-danger" onclick="clearAll()">🗑️ Clear All</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-num" id="statJobs">0</div>
+                <div class="stat-label">Total Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="statNotes">0</div>
+                <div class="stat-label">Voice Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="statToday">0</div>
+                <div class="stat-label">Today</div>
+            </div>
+        </div>
+
+        <!-- Jobs Grid -->
+        <div id="jobsGrid" class="jobs-grid"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h2>📋 No Projects Yet</h2>
+            <p style="margin-bottom: 20px;">Projects will appear here after you save them in the field capture interface.</p>
+            <button class="btn-primary" onclick="window.location.href='field-working.html'">🎤 Go to Field Capture</button>
+        </div>
+
+        <!-- Debug -->
+        <div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h3 style="margin-bottom: 10px;">🔧 Debug Console</h3>
+            <div id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        let allJobs = [];
+
+        function log(msg) {
+            const t = new Date().toLocaleTimeString();
+            console.log(msg);
+            document.getElementById('console').innerHTML += `[${t}] ${msg}\n`;
+            document.getElementById('console').scrollTop = 999999;
+        }
+
+        function loadJobs() {
+            log('📂 Loading jobs from localStorage...');
+
+            try {
+                const stored = localStorage.getItem('emg_all_jobs');
+
+                if (!stored) {
+                    log('📭 No jobs found in storage');
+                    allJobs = [];
+                    return;
+                }
+
+                allJobs = JSON.parse(stored);
+                log(`✅ Loaded ${allJobs.length} jobs`);
+
+                allJobs.forEach((job, i) => {
+                    log(`  ${i + 1}. ${job.projectReference}: ${job.voiceNotes.length} notes`);
+                });
+
+            } catch (err) {
+                log('❌ Error loading: ' + err.message);
+                allJobs = [];
+            }
+        }
+
+        function updateStats() {
+            const totalNotes = allJobs.reduce((sum, j) => sum + (j.voiceNotes?.length || 0), 0);
+
+            const today = new Date().toDateString();
+            const todayJobs = allJobs.filter(j => new Date(j.createdAt).toDateString() === today).length;
+
+            document.getElementById('statJobs').textContent = allJobs.length;
+            document.getElementById('statNotes').textContent = totalNotes;
+            document.getElementById('statToday').textContent = todayJobs;
+
+            log(`📊 Stats: ${allJobs.length} jobs, ${totalNotes} notes, ${todayJobs} today`);
+        }
+
+        function displayJobs() {
+            const grid = document.getElementById('jobsGrid');
+            const empty = document.getElementById('emptyState');
+
+            if (allJobs.length === 0) {
+                grid.style.display = 'none';
+                empty.style.display = 'block';
+                log('📭 No jobs to display');
+                return;
+            }
+
+            grid.style.display = 'grid';
+            empty.style.display = 'none';
+
+            grid.innerHTML = allJobs.map(job => {
+                const notesHtml = job.voiceNotes && job.voiceNotes.length > 0
+                    ? job.voiceNotes.map((note, i) => `
+                        <div class="voice-note-item">
+                            <div class="voice-note-num">Note ${i + 1}</div>
+                            <div class="voice-note-text">${note.transcription}</div>
+                        </div>
+                    `).join('')
+                    : '<div style="color: #999; text-align: center; padding: 10px;">No voice notes</div>';
+
+                return `
+                    <div class="job-card">
+                        <div class="job-ref">${job.projectReference}</div>
+                        <div class="job-address">${job.address}</div>
+
+                        <div class="job-meta">
+                            <span>🎤 ${job.voiceNotes?.length || 0} notes</span>
+                            <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+                        </div>
+
+                        <div style="font-weight: bold; color: #2C5F2D; margin: 10px 0;">Voice Notes:</div>
+                        <div class="voice-notes-preview">
+                            ${notesHtml}
+                        </div>
+
+                        <button class="btn-danger" onclick="deleteJob('${job.jobId}')" style="width: 100%; margin-top: 10px;">
+                            🗑️ Delete Project
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            log('✅ Displayed ' + allJobs.length + ' jobs');
+        }
+
+        function deleteJob(jobId) {
+            if (!confirm('⚠️ Delete this project?')) return;
+
+            allJobs = allJobs.filter(j => j.jobId !== jobId);
+            localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+
+            log('🗑️ Deleted job: ' + jobId);
+            loadJobs();
+            updateStats();
+            displayJobs();
+        }
+
+        function clearAll() {
+            if (!confirm('⚠️⚠️⚠️ DELETE ALL PROJECTS?\n\nThis cannot be undone!')) return;
+
+            localStorage.clear();
+            allJobs = [];
+            log('🗑️ ALL DATA CLEARED');
+            updateStats();
+            displayJobs();
+        }
+
+        // Initialize
+        log('🚀 Dashboard loading...');
+        loadJobs();
+        updateStats();
+        displayJobs();
+        log('✅ Dashboard ready');
+
+        // Auto-refresh every 5 seconds
+        setInterval(() => {
+            const currentCount = allJobs.length;
+            loadJobs();
+            if (allJobs.length !== currentCount) {
+                log('🔄 Data changed, refreshing...');
+                updateStats();
+                displayJobs();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
