@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>🔧 EMG Storage Fix</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; border: 3px solid #2C5F2D; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; font-weight: bold; border: none; border-radius: 8px; }
+        .danger { background: #D32F2F; color: white; }
+        .success { background: #4CAF50; color: white; }
+        .info { background: #2196F3; color: white; }
+        #output { background: #000; color: #0f0; padding: 15px; font-family: monospace; margin: 10px 0; border-radius: 8px; max-height: 400px; overflow-y: auto; }
+        .warning { background: #fff3cd; border: 3px solid #FF9800; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        h1 { color: #2C5F2D; }
+        .stat { font-size: 24px; font-weight: bold; color: #D32F2F; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 EMG Storage Fix Tool</h1>
+
+    <div class="warning">
+        <h2>⚠️ Problem Detected</h2>
+        <p><strong>Error:</strong> "Setting the value of 'emg_all_jobs' exceeded the quota"</p>
+        <p><strong>Cause:</strong> Photos stored as base64 fill up localStorage (5-10MB limit)</p>
+        <p><strong>Solution:</strong> Clear storage and use photo-free version</p>
+    </div>
+
+    <div class="box">
+        <h2>📊 Current Storage Usage</h2>
+        <div class="stat" id="storageSize">Calculating...</div>
+        <div id="storageDetails"></div>
+    </div>
+
+    <div class="box">
+        <h2>🗑️ Step 1: Clear Storage</h2>
+        <p>This will delete ALL data including photos that are causing the problem.</p>
+        <button class="danger" onclick="clearStorage()">
+            🗑️ CLEAR ALL STORAGE NOW
+        </button>
+    </div>
+
+    <div class="box">
+        <h2>✅ Step 2: Use Working Version</h2>
+        <p>After clearing storage, use this version that doesn't store photos:</p>
+        <button class="success" onclick="window.location.href='field-no-photos.html'">
+            🎤 Go to Field Capture (No Photos)
+        </button>
+        <button class="info" onclick="window.location.href='test-simple.html'">
+            🧪 Go to Simple Test Page
+        </button>
+    </div>
+
+    <div class="box">
+        <h2>📟 Output Log</h2>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function log(msg) {
+            const output = document.getElementById('output');
+            const time = new Date().toLocaleTimeString();
+            output.innerHTML += `[${time}] ${msg}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(msg);
+        }
+
+        function calculateStorageSize() {
+            let total = 0;
+            const details = [];
+
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    const size = (localStorage[key].length * 2); // UTF-16 = 2 bytes per char
+                    total += size;
+                    if (size > 1024) {
+                        details.push({
+                            key: key,
+                            size: size,
+                            sizeMB: (size / 1024 / 1024).toFixed(2)
+                        });
+                    }
+                }
+            }
+
+            return { total, details };
+        }
+
+        function displayStorageInfo() {
+            const { total, details } = calculateStorageSize();
+            const totalMB = (total / 1024 / 1024).toFixed(2);
+            const limitMB = 5; // Typical limit
+
+            document.getElementById('storageSize').innerHTML = `
+                ${totalMB} MB used of ~${limitMB} MB limit
+                ${totalMB > limitMB * 0.8 ? ' ⚠️ ALMOST FULL!' : ''}
+            `;
+
+            let detailsHtml = '<ul style="margin-top: 10px;">';
+            details.sort((a, b) => b.size - a.size);
+            details.forEach(item => {
+                detailsHtml += `<li><strong>${item.key}:</strong> ${item.sizeMB} MB</li>`;
+            });
+            detailsHtml += '</ul>';
+
+            document.getElementById('storageDetails').innerHTML = detailsHtml;
+
+            log(`📊 Storage: ${totalMB} MB used`);
+            details.forEach(item => {
+                log(`   ${item.key}: ${item.sizeMB} MB`);
+            });
+        }
+
+        function clearStorage() {
+            if (!confirm('⚠️⚠️⚠️ DELETE ALL DATA?\n\nThis will remove:\n- All projects\n- All voice notes\n- All photos\n\nThis cannot be undone!')) {
+                return;
+            }
+
+            log('🗑️ Clearing localStorage...');
+
+            const before = calculateStorageSize();
+            log(`Before: ${(before.total / 1024 / 1024).toFixed(2)} MB`);
+
+            localStorage.clear();
+
+            const after = calculateStorageSize();
+            log(`After: ${(after.total / 1024 / 1024).toFixed(2)} MB`);
+
+            log('✅ Storage cleared!');
+
+            alert('✅ Storage cleared!\n\nNow you can create new projects without storage errors.');
+
+            displayStorageInfo();
+        }
+
+        // Run on load
+        log('🚀 Storage Fix Tool loaded');
+        displayStorageInfo();
+    </script>
+</body>
+</html>

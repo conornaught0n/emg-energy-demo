@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG Field - NO PHOTOS (Storage Fixed)</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; padding: 25px; margin: 15px 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        h2 { color: #2C5F2D; margin-bottom: 15px; }
+        input { width: 100%; padding: 12px; font-size: 16px; margin: 10px 0; border: 2px solid #e0e0e0; border-radius: 8px; }
+        button { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin: 5px 0; }
+        .btn-primary { background: #2C5F2D; color: white; }
+        .btn-secondary { background: #2196F3; color: white; }
+        .btn-danger { background: #D32F2F; color: white; }
+        .btn-warning { background: #FF9800; color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { background: #e8f5e9; border: 3px solid #4CAF50; padding: 15px; border-radius: 8px; margin: 15px 0; display: none; }
+        .warning { background: #fff3cd; border: 2px solid #FF9800; padding: 15px; border-radius: 8px; text-align: center; }
+        .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .count { background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
+        .count-num { font-size: 28px; font-weight: bold; color: #2C5F2D; }
+        .count-label { font-size: 12px; color: #666; }
+        #console { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; border-radius: 8px; }
+        select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; margin: 10px 0; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card" style="text-align: center;">
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" style="height: 40px;">
+            <div style="color: #666; margin-top: 10px;">Field Capture - Storage Fixed (No Photos)</div>
+        </div>
+
+        <div class="card">
+            <h2>📋 PROJECT</h2>
+            <label style="font-weight: bold;">Select Existing:</label>
+            <select id="projectSelector"></select>
+            <div style="text-align: center; margin: 10px 0; color: #666; font-weight: bold;">OR</div>
+            <label style="font-weight: bold;">Create New:</label>
+            <input type="text" id="addressInput" placeholder="Enter address">
+            <button class="btn-primary" onclick="createProject()">➕ CREATE PROJECT</button>
+
+            <div id="statusBox" class="status">
+                <strong>✅ PROJECT ACTIVE</strong><br>
+                <span id="statusRef"></span><br>
+                <span id="statusAddr"></span>
+            </div>
+
+            <div id="warningBox" class="warning">⚠️ No project selected</div>
+        </div>
+
+        <div class="card">
+            <h2>🎤 VOICE NOTES (Text Only)</h2>
+            <input type="text" id="voiceText" placeholder="Enter voice note description">
+            <button class="btn-secondary" onclick="addVoiceNote()">🎤 ADD VOICE NOTE</button>
+
+            <div class="counts">
+                <div class="count">
+                    <div class="count-num" id="voiceCount">0</div>
+                    <div class="count-label">Voice Notes</div>
+                </div>
+                <div class="count">
+                    <div class="count-num" id="photoCount">0</div>
+                    <div class="count-label">Photos (Disabled)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>💾 SAVE</h2>
+            <button class="btn-warning" id="saveBtn" onclick="saveData()">💾 SAVE TO DASHBOARD</button>
+            <button class="btn-secondary" onclick="window.location.href='manager/triage-simple.html'">📊 VIEW DASHBOARD</button>
+            <button class="btn-danger" onclick="clearAll()">🗑️ CLEAR ALL</button>
+        </div>
+
+        <div class="card">
+            <h2>🔧 Console</h2>
+            <div id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        let state = { projectId: null, projectRef: null, address: '', voiceNotes: [] };
+
+        function log(msg) {
+            const t = new Date().toLocaleTimeString();
+            console.log(msg);
+            document.getElementById('console').innerHTML += `[${t}] ${msg}\n`;
+            document.getElementById('console').scrollTop = 999999;
+        }
+
+        log('🚀 App started (NO PHOTOS version - fixes storage)');
+
+        function createProject() {
+            log('▶️ createProject()');
+            const addr = document.getElementById('addressInput').value.trim();
+            if (!addr) { alert('❌ Enter address!'); return; }
+
+            state.projectId = 'proj-' + Date.now();
+            state.projectRef = 'EMG-2026-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            state.address = addr;
+            state.voiceNotes = [];
+
+            log('✅ Created: ' + state.projectRef);
+            updateUI();
+        }
+
+        function addVoiceNote() {
+            log('▶️ addVoiceNote()');
+            if (!state.projectId) { alert('❌ Create project first!'); return; }
+
+            const text = document.getElementById('voiceText').value.trim();
+            if (!text) { alert('❌ Enter text!'); return; }
+
+            state.voiceNotes.push({
+                id: 'vn-' + Date.now(),
+                transcription: text,
+                captured_at: new Date().toISOString()
+            });
+
+            document.getElementById('voiceText').value = '';
+            log('✅ Added note: ' + text);
+            updateUI();
+        }
+
+        function saveData() {
+            log('▶️ saveData()');
+            if (!state.projectId) { alert('❌ Create project first!'); return; }
+
+            const btn = document.getElementById('saveBtn');
+            btn.textContent = '⏳ SAVING...';
+            btn.disabled = true;
+
+            try {
+                const jobData = {
+                    jobId: state.projectId,
+                    projectReference: state.projectRef,
+                    address: state.address,
+                    createdAt: new Date().toISOString(),
+                    status: 'in-progress',
+                    voiceNotes: state.voiceNotes,
+                    photos: [],
+                    managerInputs: {}
+                };
+
+                // Calculate size BEFORE saving
+                const jsonStr = JSON.stringify([jobData]);
+                const sizeMB = (jsonStr.length * 2 / 1024 / 1024).toFixed(2);
+                log(`Data size: ${sizeMB} MB`);
+
+                let jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                const idx = jobs.findIndex(j => j.jobId === state.projectId);
+                if (idx >= 0) jobs[idx] = jobData; else jobs.push(jobData);
+
+                localStorage.setItem('emg_all_jobs', JSON.stringify(jobs));
+
+                log('✅ SAVED! Total jobs: ' + jobs.length);
+                btn.textContent = '✅ SAVED!';
+                setTimeout(() => { btn.textContent = '💾 SAVE TO DASHBOARD'; btn.disabled = false; }, 2000);
+                loadProjects();
+
+            } catch (err) {
+                log('❌ SAVE FAILED: ' + err.message);
+                alert('❌ Save failed: ' + err.message);
+                btn.textContent = '💾 SAVE TO DASHBOARD';
+                btn.disabled = false;
+            }
+        }
+
+        function loadProjects() {
+            const sel = document.getElementById('projectSelector');
+            sel.innerHTML = '<option value="">-- Select --</option>';
+            const jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+            jobs.forEach(j => {
+                const opt = document.createElement('option');
+                opt.value = j.jobId;
+                opt.textContent = j.projectReference + ' - ' + j.address;
+                sel.appendChild(opt);
+            });
+            sel.onchange = () => {
+                const job = jobs.find(j => j.jobId === sel.value);
+                if (job) {
+                    state.projectId = job.jobId;
+                    state.projectRef = job.projectReference;
+                    state.address = job.address;
+                    state.voiceNotes = job.voiceNotes || [];
+                    document.getElementById('addressInput').value = job.address;
+                    log('✅ Loaded: ' + job.projectReference);
+                    updateUI();
+                }
+            };
+        }
+
+        function clearAll() {
+            if (!confirm('⚠️ Clear all?')) return;
+            localStorage.clear();
+            state = { projectId: null, projectRef: null, address: '', voiceNotes: [] };
+            document.getElementById('addressInput').value = '';
+            document.getElementById('console').innerHTML = '';
+            loadProjects();
+            updateUI();
+            log('🗑️ Cleared');
+        }
+
+        function updateUI() {
+            document.getElementById('voiceCount').textContent = state.voiceNotes.length;
+            document.getElementById('photoCount').textContent = '0';
+
+            const status = document.getElementById('statusBox');
+            const warning = document.getElementById('warningBox');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (state.projectId) {
+                status.style.display = 'block';
+                warning.style.display = 'none';
+                document.getElementById('statusRef').textContent = state.projectRef;
+                document.getElementById('statusAddr').textContent = state.address;
+                saveBtn.disabled = state.voiceNotes.length === 0;
+                saveBtn.textContent = state.voiceNotes.length > 0 ? `💾 SAVE (${state.voiceNotes.length} notes)` : '💾 SAVE TO DASHBOARD';
+            } else {
+                status.style.display = 'none';
+                warning.style.display = 'block';
+                saveBtn.disabled = true;
+                saveBtn.textContent = '⚠️ CREATE PROJECT FIRST';
+            }
+        }
+
+        loadProjects();
+        updateUI();
+    </script>
+</body>
+</html>
