@@ -354,7 +354,10 @@
     <div class="container">
         <!-- Project Selector -->
         <div class="project-info">
-            <h2>Select or Create Project</h2>
+            <h2 style="color: #2C5F2D; margin-bottom: 10px;">⚠️ STEP 1: Select or Create Project</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">
+                You must create or select a project before recording voice notes or taking photos.
+            </p>
 
             <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px;">My Projects:</label>
             <select id="projectSelector" onchange="loadSelectedProject()" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; margin-bottom: 15px;">
@@ -367,20 +370,21 @@
                 <div style="flex: 1; height: 2px; background: #e0e0e0;"></div>
             </div>
 
-            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px;">Create New Project:</label>
-            <input type="text" id="addressInput" placeholder="Enter property address for new project" />
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #2C5F2D;">Create New Project:</label>
+            <input type="text" id="addressInput" placeholder="Enter property address (required)" style="border: 2px solid #e0e0e0;" />
 
             <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button onclick="startNewProject()" style="flex: 1; padding: 12px; background: #2C5F2D; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                    ➕ Create New Project
+                <button onclick="startNewProject()" style="flex: 1; padding: 15px; background: #2C5F2D; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(44,95,45,0.3);">
+                    ➕ CREATE NEW PROJECT
                 </button>
                 <button onclick="clearAllData()" style="padding: 12px 20px; background: #D32F2F; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                     🗑️ Clear All
                 </button>
             </div>
 
-            <div id="projectStatus" style="margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 8px; font-size: 14px; display: none;">
-                <strong>📍 Current Project:</strong> <span id="currentProjectRef"></span><br>
+            <div id="projectStatus" style="margin-top: 15px; padding: 18px; background: #e8f5e9; border: 3px solid #4CAF50; border-radius: 8px; font-size: 15px; display: none;">
+                <div style="font-size: 18px; font-weight: bold; color: #2C5F2D; margin-bottom: 8px;">✅ PROJECT ACTIVE</div>
+                <strong>📍 Reference:</strong> <span id="currentProjectRef" style="color: #2C5F2D;"></span><br>
                 <strong>📝 Address:</strong> <span id="currentProjectAddress"></span>
             </div>
         </div>
@@ -399,6 +403,17 @@
             </div>
             <div class="transcription-text" id="transcriptionText">
                 Listening... Start speaking now!
+            </div>
+        </div>
+
+        <!-- Helper Message (shown when no project) -->
+        <div id="noProjectHelper" style="background: #fff3cd; border: 3px solid #FF9800; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+            <div style="font-weight: bold; font-size: 16px; color: #856404; margin-bottom: 8px;">
+                No Project Selected
+            </div>
+            <div style="color: #856404; font-size: 14px;">
+                Please create or select a project above before capturing data
             </div>
         </div>
 

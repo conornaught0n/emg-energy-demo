@@ -179,6 +179,7 @@ function showProjectStatus() {
     const statusDiv = document.getElementById('projectStatus');
     const refSpan = document.getElementById('currentProjectRef');
     const addressSpan = document.getElementById('currentProjectAddress');
+    const helperDiv = document.getElementById('noProjectHelper');
 
     if (projectId) {
         const ref = localStorage.getItem('current_project_ref') || 'Unknown';
@@ -188,14 +189,32 @@ function showProjectStatus() {
         refSpan.textContent = ref;
         addressSpan.textContent = address;
         statusDiv.style.display = 'block';
+        if (helperDiv) helperDiv.style.display = 'none';
     } else {
         statusDiv.style.display = 'none';
+        if (helperDiv) helperDiv.style.display = 'block';
     }
 }
 
 function manualSave() {
+    const saveButton = document.getElementById('saveButton');
+
     if (!projectId) {
-        showNotification('Please create or select a project first');
+        showNotification('❌ Please create or select a project first!');
+        const addressInput = document.getElementById('addressInput');
+        addressInput.style.border = '3px solid #D32F2F';
+        addressInput.focus();
+        setTimeout(() => addressInput.style.border = '', 2000);
+        return;
+    }
+
+    const address = document.getElementById('addressInput').value.trim();
+    if (!address) {
+        showNotification('❌ Please enter an address first!');
+        const addressInput = document.getElementById('addressInput');
+        addressInput.style.border = '3px solid #D32F2F';
+        addressInput.focus();
+        setTimeout(() => addressInput.style.border = '', 2000);
         return;
     }
 
@@ -205,29 +224,40 @@ function manualSave() {
     console.log('Photos:', photos.length);
 
     // Force save to dashboard
-    const saveButton = document.getElementById('saveButton');
     saveButton.textContent = '⏳ SAVING...';
     saveButton.disabled = true;
 
     // Save everything
-    saveToLocalStorageAndDashboard();
+    try {
+        saveToLocalStorageAndDashboard();
 
-    setTimeout(() => {
-        saveButton.textContent = '✅ SAVED!';
+        setTimeout(() => {
+            saveButton.textContent = '✅ SAVED!';
+            setTimeout(() => {
+                saveButton.textContent = '💾 SAVE TO DASHBOARD';
+                saveButton.disabled = false;
+            }, 1500);
+
+            showNotification(`✅ Saved to dashboard: ${voiceNotes.length} notes, ${photos.length} photos`);
+        }, 500);
+    } catch (error) {
+        console.error('Save error:', error);
+        saveButton.textContent = '❌ SAVE FAILED';
         setTimeout(() => {
             saveButton.textContent = '💾 SAVE TO DASHBOARD';
             saveButton.disabled = false;
-        }, 1500);
-
-        showNotification(`Saved to dashboard: ${voiceNotes.length} notes, ${photos.length} photos`);
-    }, 500);
+        }, 2000);
+        showNotification('❌ Save failed. Check console for details.');
+    }
 }
 
 function saveToLocalStorageAndDashboard() {
     const address = document.getElementById('addressInput').value.trim();
     if (!address || !projectId) {
-        console.warn('Cannot save - missing address or project ID');
-        return;
+        console.error('❌ Cannot save - missing address or project ID');
+        console.error('Address:', address);
+        console.error('Project ID:', projectId);
+        throw new Error('Missing address or project ID');
     }
 
     const projectRef = localStorage.getItem('current_project_ref') || `EMG-2026-${projectId.slice(0, 6).toUpperCase()}`;
