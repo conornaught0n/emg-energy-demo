@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Field Capture - FINAL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%); min-height: 100vh; padding: 20px; }
+        .card { background: white; padding: 25px; margin: 15px auto; max-width: 600px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        h1, h2 { color: #2C5F2D; }
+        input, select { width: 100%; padding: 12px; font-size: 16px; margin: 8px 0; border: 2px solid #ddd; border-radius: 8px; }
+        button { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin: 8px 0; }
+        .btn-green { background: #4CAF50; color: white; }
+        .btn-blue { background: #2196F3; color: white; }
+        .btn-blue.recording { background: #D32F2F; animation: pulse 1s infinite; }
+        .btn-orange { background: #FF9800; color: white; }
+        .btn-purple { background: #9C27B0; color: white; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status { background: #e8f5e9; border: 3px solid #4CAF50; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
+        .warning { background: #fff3cd; border: 2px solid #FF9800; padding: 15px; border-radius: 8px; text-align: center; }
+        .note { background: #f5f5f5; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 4px solid #4CAF50; }
+        .note-num { font-weight: bold; color: #2C5F2D; font-size: 13px; }
+        .note-text { color: #333; margin-top: 5px; }
+        .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .count { background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
+        .count-num { font-size: 28px; font-weight: bold; color: #2C5F2D; }
+        .transcribe-box { background: #ffebee; border: 3px solid #D32F2F; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
+        .transcribe-box.active { display: block; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+    </style>
+</head>
+<body>
+    <div class="card" style="text-align: center;">
+        <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" style="height: 40px;">
+        <h1 style="margin: 10px 0;">Field Capture</h1>
+    </div>
+
+    <div class="card">
+        <h2>1️⃣ Project</h2>
+        <select id="projSel"></select>
+        <div style="text-align: center; margin: 10px; color: #666;">OR</div>
+        <input type="text" id="addr" placeholder="Enter address">
+        <button class="btn-green" onclick="createProj()">CREATE PROJECT</button>
+        <div id="statusBox" class="status"></div>
+        <div id="warnBox" class="warning">⚠️ Create or select project first</div>
+    </div>
+
+    <div class="card">
+        <h2>2️⃣ Voice Notes</h2>
+        <div id="transcribeBox" class="transcribe-box">
+            <div style="color: #D32F2F; font-weight: bold;">🔴 RECORDING...</div>
+            <div id="transcribeText" style="font-size: 18px; margin-top: 10px;">Listening...</div>
+        </div>
+        <button class="btn-blue" id="recBtn" onclick="toggleRec()">🎤 RECORD (Auto-Transcribe)</button>
+        <div class="counts">
+            <div class="count"><div class="count-num" id="noteCount">0</div><div style="font-size: 12px;">Notes</div></div>
+            <div class="count"><div class="count-num" id="projCount">0</div><div style="font-size: 12px;">Projects</div></div>
+        </div>
+        <div id="notesList"></div>
+    </div>
+
+    <div class="card">
+        <h2>3️⃣ Save</h2>
+        <button class="btn-orange" id="saveBtn" onclick="saveProj()">💾 SAVE TO DASHBOARD</button>
+        <button class="btn-purple" onclick="window.location.href='final-dash.html'">📊 VIEW DASHBOARD</button>
+    </div>
+
+    <script>
+        var STATE = { projId: null, projRef: null, addr: '', notes: [], recording: false, recognition: null, transcript: '' };
+
+        function log(m) { console.log(m); }
+
+        function createProj() {
+            var addr = document.getElementById('addr').value.trim();
+            if (!addr) { alert('❌ Enter address!'); return; }
+
+            STATE.projId = 'p' + Date.now();
+            STATE.projRef = 'EMG-2026-' + Math.random().toString(36).substr(2,6).toUpperCase();
+            STATE.addr = addr;
+            STATE.notes = [];
+
+            log('✅ Created: ' + STATE.projRef);
+            updateUI();
+        }
+
+        function toggleRec() {
+            if (!STATE.projId) { alert('❌ Create project first!'); return; }
+            STATE.recording ? stopRec() : startRec();
+        }
+
+        function startRec() {
+            log('🎤 Starting...');
+            var box = document.getElementById('transcribeBox');
+            var text = document.getElementById('transcribeText');
+            var btn = document.getElementById('recBtn');
+
+            box.classList.add('active');
+            btn.classList.add('recording');
+            btn.textContent = '⏹️ STOP';
+            STATE.recording = true;
+            STATE.transcript = '';
+            text.textContent = 'Listening...';
+
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { alert('❌ Speech not supported! Use Chrome.'); stopRec(); return; }
+
+            STATE.recognition = new SR();
+            STATE.recognition.continuous = false;
+            STATE.recognition.interimResults = true;
+            STATE.recognition.lang = 'en-IE';
+
+            STATE.recognition.onresult = function(e) {
+                var t = '';
+                for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+                STATE.transcript = t.trim();
+                text.textContent = STATE.transcript || 'Listening...';
+            };
+
+            STATE.recognition.onerror = function(e) {
+                log('❌ Error: ' + e.error);
+                if (e.error === 'not-allowed') alert('❌ Allow microphone access!');
+                stopRec();
+            };
+
+            STATE.recognition.onend = function() {
+                if (STATE.recording && STATE.transcript) saveNote();
+                stopRec();
+            };
+
+            try {
+                STATE.recognition.start();
+                log('✅ Recording started');
+            } catch(e) {
+                log('❌ Start failed: ' + e.message);
+                alert('❌ ' + e.message);
+                stopRec();
+            }
+        }
+
+        function stopRec() {
+            if (STATE.recognition) { STATE.recognition.stop(); STATE.recognition = null; }
+            document.getElementById('transcribeBox').classList.remove('active');
+            document.getElementById('recBtn').classList.remove('recording');
+            document.getElementById('recBtn').textContent = '🎤 RECORD (Auto-Transcribe)';
+            STATE.recording = false;
+            log('⏹️ Stopped');
+        }
+
+        function saveNote() {
+            if (!STATE.transcript) return;
+            STATE.notes.push({ id: 'n' + Date.now(), text: STATE.transcript, time: new Date().toISOString() });
+            log('✅ Note saved: ' + STATE.transcript);
+            STATE.transcript = '';
+            updateUI();
+        }
+
+        function saveProj() {
+            if (!STATE.projId) { alert('❌ Create project first!'); return; }
+            if (STATE.notes.length === 0) { alert('❌ Add notes first!'); return; }
+
+            var btn = document.getElementById('saveBtn');
+            btn.textContent = '⏳ SAVING...';
+            btn.disabled = true;
+
+            try {
+                var job = {
+                    jobId: STATE.projId,
+                    projectReference: STATE.projRef,
+                    address: STATE.addr,
+                    createdAt: new Date().toISOString(),
+                    status: 'in-progress',
+                    voiceNotes: STATE.notes.map(function(n) {
+                        return { id: n.id, transcription: n.text, captured_at: n.time };
+                    }),
+                    photos: [],
+                    managerInputs: {}
+                };
+
+                var jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                var idx = -1;
+                for (var i = 0; i < jobs.length; i++) {
+                    if (jobs[i].jobId === STATE.projId) { idx = i; break; }
+                }
+
+                if (idx >= 0) jobs[idx] = job; else jobs.push(job);
+
+                localStorage.setItem('emg_all_jobs', JSON.stringify(jobs));
+
+                log('✅ SAVED! Jobs: ' + jobs.length);
+
+                btn.textContent = '✅ SAVED!';
+                setTimeout(function() { btn.textContent = '💾 SAVE TO DASHBOARD'; btn.disabled = false; }, 2000);
+
+                loadProjs();
+
+            } catch(e) {
+                log('❌ Save failed: ' + e.message);
+                alert('❌ ' + e.message);
+                btn.textContent = '💾 SAVE TO DASHBOARD';
+                btn.disabled = false;
+            }
+        }
+
+        function loadProjs() {
+            var sel = document.getElementById('projSel');
+            sel.innerHTML = '<option value="">-- Select Project --</option>';
+
+            try {
+                var jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                for (var i = 0; i < jobs.length; i++) {
+                    var opt = document.createElement('option');
+                    opt.value = jobs[i].jobId;
+                    opt.textContent = jobs[i].projectReference + ' - ' + jobs[i].address;
+                    sel.appendChild(opt);
+                }
+
+                sel.onchange = function() {
+                    for (var i = 0; i < jobs.length; i++) {
+                        if (jobs[i].jobId === sel.value) {
+                            STATE.projId = jobs[i].jobId;
+                            STATE.projRef = jobs[i].projectReference;
+                            STATE.addr = jobs[i].address;
+                            STATE.notes = jobs[i].voiceNotes.map(function(n) {
+                                return { id: n.id, text: n.transcription, time: n.captured_at };
+                            });
+                            document.getElementById('addr').value = STATE.addr;
+                            log('✅ Loaded: ' + STATE.projRef);
+                            updateUI();
+                            break;
+                        }
+                    }
+                };
+
+                document.getElementById('projCount').textContent = jobs.length;
+                log('📋 ' + jobs.length + ' projects');
+
+            } catch(e) {
+                log('❌ Load error: ' + e.message);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('noteCount').textContent = STATE.notes.length;
+
+            var status = document.getElementById('statusBox');
+            var warn = document.getElementById('warnBox');
+            var saveBtn = document.getElementById('saveBtn');
+
+            if (STATE.projId) {
+                status.style.display = 'block';
+                status.innerHTML = '<strong>✅ ACTIVE</strong><br>' + STATE.projRef + '<br>' + STATE.addr;
+                warn.style.display = 'none';
+                saveBtn.disabled = STATE.notes.length === 0;
+                saveBtn.textContent = STATE.notes.length > 0 ? '💾 SAVE (' + STATE.notes.length + ' notes)' : '💾 SAVE TO DASHBOARD';
+            } else {
+                status.style.display = 'none';
+                warn.style.display = 'block';
+                saveBtn.disabled = true;
+                saveBtn.textContent = '⚠️ CREATE PROJECT FIRST';
+            }
+
+            var list = document.getElementById('notesList');
+            if (STATE.notes.length === 0) {
+                list.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No notes yet</div>';
+            } else {
+                list.innerHTML = '<h3 style="margin: 15px 0 10px 0;">Notes:</h3>';
+                for (var i = 0; i < STATE.notes.length; i++) {
+                    list.innerHTML += '<div class="note"><div class="note-num">Note ' + (i+1) + '</div><div class="note-text">' + STATE.notes[i].text + '</div></div>';
+                }
+            }
+        }
+
+        log('🚀 Loading...');
+        loadProjs();
+        updateUI();
+        log('✅ Ready');
+    </script>
+</body>
+</html>

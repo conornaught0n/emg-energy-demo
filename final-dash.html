@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG Dashboard - FINAL</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f7fa; }
+        .header { background: #2C5F2D; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header img { height: 35px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 30px; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+        .stat-num { font-size: 36px; font-weight: bold; color: #2C5F2D; }
+        .jobs { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .job { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .job-ref { font-size: 20px; font-weight: bold; color: #2C5F2D; margin-bottom: 10px; }
+        .job-addr { color: #666; margin-bottom: 15px; }
+        .notes { background: #f9f9f9; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; margin: 15px 0; }
+        .note { padding: 8px 0; border-bottom: 1px solid #ddd; }
+        .note:last-child { border-bottom: none; }
+        button { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-field { background: #2196F3; color: white; }
+        .btn-delete { background: #f44336; color: white; width: 100%; margin-top: 10px; }
+        .empty { text-align: center; padding: 60px 20px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png">
+            <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Manager Dashboard</div>
+        </div>
+        <button class="btn-field" onclick="window.location.href='final-field.html'">🎤 Field Capture</button>
+    </div>
+
+    <div class="container">
+        <div class="stats">
+            <div class="stat"><div class="stat-num" id="statJobs">0</div><div>Projects</div></div>
+            <div class="stat"><div class="stat-num" id="statNotes">0</div><div>Voice Notes</div></div>
+            <div class="stat"><div class="stat-num" id="statToday">0</div><div>Today</div></div>
+        </div>
+
+        <div id="jobsGrid" class="jobs"></div>
+
+        <div id="emptyState" class="empty" style="display: none;">
+            <h2 style="color: #2C5F2D; margin-bottom: 15px;">📋 No Projects</h2>
+            <p style="margin-bottom: 20px;">Create projects in the field capture interface.</p>
+            <button class="btn-field" onclick="window.location.href='final-field.html'">🎤 Go to Field Capture</button>
+        </div>
+    </div>
+
+    <script>
+        var jobs = [];
+
+        function log(m) { console.log(m); }
+
+        function load() {
+            log('📂 Loading...');
+            try {
+                var data = localStorage.getItem('emg_all_jobs');
+                jobs = data ? JSON.parse(data) : [];
+                log('✅ Loaded ' + jobs.length + ' jobs');
+            } catch(e) {
+                log('❌ Error: ' + e.message);
+                jobs = [];
+            }
+        }
+
+        function updateStats() {
+            var notes = 0;
+            var today = new Date().toDateString();
+            var todayJobs = 0;
+
+            for (var i = 0; i < jobs.length; i++) {
+                notes += (jobs[i].voiceNotes || []).length;
+                if (new Date(jobs[i].createdAt).toDateString() === today) todayJobs++;
+            }
+
+            document.getElementById('statJobs').textContent = jobs.length;
+            document.getElementById('statNotes').textContent = notes;
+            document.getElementById('statToday').textContent = todayJobs;
+        }
+
+        function display() {
+            var grid = document.getElementById('jobsGrid');
+            var empty = document.getElementById('emptyState');
+
+            if (jobs.length === 0) {
+                grid.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+
+            grid.style.display = 'grid';
+            empty.style.display = 'none';
+            grid.innerHTML = '';
+
+            for (var i = 0; i < jobs.length; i++) {
+                var job = jobs[i];
+                var div = document.createElement('div');
+                div.className = 'job';
+
+                var notesHtml = '';
+                if (job.voiceNotes && job.voiceNotes.length > 0) {
+                    notesHtml = '<div class="notes"><strong>Voice Notes:</strong>';
+                    for (var j = 0; j < job.voiceNotes.length; j++) {
+                        notesHtml += '<div class="note">' + (j+1) + '. ' + job.voiceNotes[j].transcription + '</div>';
+                    }
+                    notesHtml += '</div>';
+                } else {
+                    notesHtml = '<div style="color: #999; padding: 10px;">No notes</div>';
+                }
+
+                div.innerHTML =
+                    '<div class="job-ref">' + job.projectReference + '</div>' +
+                    '<div class="job-addr">' + job.address + '</div>' +
+                    '<div style="color: #666; font-size: 14px; margin-bottom: 10px;">🎤 ' + (job.voiceNotes || []).length + ' notes | 📅 ' + new Date(job.createdAt).toLocaleDateString() + '</div>' +
+                    notesHtml +
+                    '<button class="btn-delete" onclick="deleteJob(\'' + job.jobId + '\')">🗑️ Delete</button>';
+
+                grid.appendChild(div);
+            }
+        }
+
+        function deleteJob(id) {
+            if (!confirm('⚠️ Delete this project?')) return;
+            var newJobs = [];
+            for (var i = 0; i < jobs.length; i++) {
+                if (jobs[i].jobId !== id) newJobs.push(jobs[i]);
+            }
+            jobs = newJobs;
+            localStorage.setItem('emg_all_jobs', JSON.stringify(jobs));
+            log('🗑️ Deleted ' + id);
+            updateStats();
+            display();
+        }
+
+        log('🚀 Dashboard loading...');
+        load();
+        updateStats();
+        display();
+        log('✅ Ready');
+
+        setInterval(function() {
+            var before = jobs.length;
+            load();
+            if (jobs.length !== before) {
+                log('🔄 Refreshed');
+                updateStats();
+                display();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
