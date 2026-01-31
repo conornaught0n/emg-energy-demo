@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Field Capture - WORKING VERSION</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #2C5F2D 0%, #1a3a1b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header img {
+            height: 40px;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #2C5F2D;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #2C5F2D;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #D32F2F;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            background: #e8f5e9;
+            border: 3px solid #4CAF50;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .status-box.hidden {
+            display: none;
+        }
+
+        .counts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .count-item {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .count-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2C5F2D;
+        }
+
+        .count-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #FF9800;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .thumbnail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .thumbnail {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #2C5F2D;
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .recording {
+            background: #D32F2F !important;
+        }
+
+        #console {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy">
+            <div style="font-size: 14px; color: #666;">Field Data Capture - WORKING VERSION</div>
+        </div>
+
+        <!-- STEP 1: PROJECT -->
+        <div class="card">
+            <h2>📋 STEP 1: Project</h2>
+
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Existing:</label>
+            <select id="projectSelector">
+                <option value="">-- Select Existing Project --</option>
+            </select>
+
+            <div style="text-align: center; color: #666; font-weight: bold; margin: 15px 0;">OR</div>
+
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Create New:</label>
+            <input type="text" id="addressInput" placeholder="Enter property address">
+
+            <button class="btn btn-primary" onclick="createProject()">
+                ➕ CREATE NEW PROJECT
+            </button>
+
+            <div id="projectStatus" class="status-box hidden">
+                <strong>✅ PROJECT ACTIVE</strong><br>
+                <span id="projectRef"></span><br>
+                <span id="projectAddress"></span>
+            </div>
+
+            <div id="noProjectWarning" class="warning">
+                ⚠️ No project selected. Create or select a project first.
+            </div>
+        </div>
+
+        <!-- STEP 2: CAPTURE -->
+        <div class="card">
+            <h2>🎤 STEP 2: Capture Data</h2>
+
+            <button class="btn btn-secondary" id="voiceBtn" onclick="toggleRecording()">
+                🎤 RECORD VOICE NOTE
+            </button>
+
+            <button class="btn btn-secondary" onclick="document.getElementById('equipmentInput').click()">
+                📷 CAPTURE EQUIPMENT PHOTO
+            </button>
+
+            <button class="btn btn-secondary" onclick="document.getElementById('clipboardInput').click()">
+                📋 CAPTURE CLIPBOARD PHOTO
+            </button>
+
+            <input type="file" id="equipmentInput" accept="image/*" capture="environment">
+            <input type="file" id="clipboardInput" accept="image/*" capture="environment">
+
+            <div class="counts">
+                <div class="count-item">
+                    <div class="count-number" id="voiceCount">0</div>
+                    <div class="count-label">Voice Notes</div>
+                </div>
+                <div class="count-item">
+                    <div class="count-number" id="photoCount">0</div>
+                    <div class="count-label">Photos</div>
+                </div>
+                <div class="count-item">
+                    <div class="count-number" id="totalCount">0</div>
+                    <div class="count-label">Total</div>
+                </div>
+            </div>
+
+            <div id="thumbnailGrid" class="thumbnail-grid"></div>
+        </div>
+
+        <!-- STEP 3: SAVE -->
+        <div class="card">
+            <h2>💾 STEP 3: Save</h2>
+
+            <button class="btn btn-warning" id="saveBtn" onclick="saveData()">
+                💾 SAVE TO DASHBOARD
+            </button>
+
+            <button class="btn btn-secondary" onclick="window.location.href='../manager/triage.html'">
+                📊 VIEW DASHBOARD
+            </button>
+
+            <button class="btn btn-danger" onclick="clearAll()">
+                🗑️ CLEAR ALL DATA
+            </button>
+        </div>
+
+        <!-- DEBUG CONSOLE -->
+        <div class="card">
+            <h2>🔧 Debug Console</h2>
+            <div id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let state = {
+            projectId: null,
+            projectRef: null,
+            address: '',
+            voiceNotes: [],
+            photos: [],
+            isRecording: false,
+            mediaRecorder: null,
+            audioChunks: []
+        };
+
+        // ===== LOGGING =====
+        function log(msg) {
+            console.log(msg);
+            const el = document.getElementById('console');
+            el.innerHTML += msg + '\n';
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // ===== INIT =====
+        window.onload = () => {
+            log('🚀 App starting...');
+
+            // Setup photo inputs
+            document.getElementById('equipmentInput').onchange = (e) => handlePhoto(e, 'equipment');
+            document.getElementById('clipboardInput').onchange = (e) => handlePhoto(e, 'clipboard');
+
+            // Load existing projects
+            loadProjects();
+
+            // Update UI
+            updateUI();
+
+            log('✅ App ready');
+        };
+
+        // ===== PROJECT MANAGEMENT =====
+        function createProject() {
+            const address = document.getElementById('addressInput').value.trim();
+
+            if (!address) {
+                alert('❌ Please enter an address!');
+                return;
+            }
+
+            state.projectId = generateUUID();
+            state.projectRef = `EMG-2026-${state.projectId.substring(0, 6).toUpperCase()}`;
+            state.address = address;
+            state.voiceNotes = [];
+            state.photos = [];
+
+            log(`✅ Created: ${state.projectRef}`);
+            updateUI();
+        }
+
+        function loadProjects() {
+            const selector = document.getElementById('projectSelector');
+            selector.innerHTML = '<option value="">-- Select Existing Project --</option>';
+
+            const jobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+
+            jobs.forEach(job => {
+                const opt = document.createElement('option');
+                opt.value = job.jobId;
+                opt.textContent = `${job.projectReference} - ${job.address}`;
+                selector.appendChild(opt);
+            });
+
+            selector.onchange = () => {
+                const jobId = selector.value;
+                if (!jobId) return;
+
+                const job = jobs.find(j => j.jobId === jobId);
+                if (job) {
+                    state.projectId = job.jobId;
+                    state.projectRef = job.projectReference;
+                    state.address = job.address;
+                    state.voiceNotes = job.voiceNotes || [];
+                    state.photos = job.photos || [];
+
+                    document.getElementById('addressInput').value = job.address;
+
+                    log(`✅ Loaded: ${state.projectRef}`);
+                    updateUI();
+                }
+            };
+
+            log(`📋 Loaded ${jobs.length} existing projects`);
+        }
+
+        // ===== VOICE RECORDING =====
+        async function toggleRecording() {
+            if (!state.projectId) {
+                alert('❌ Create a project first!');
+                return;
+            }
+
+            if (state.isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            const btn = document.getElementById('voiceBtn');
+            btn.textContent = '⏹️ STOP RECORDING';
+            btn.classList.add('recording');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                state.mediaRecorder = new MediaRecorder(stream);
+                state.audioChunks = [];
+
+                state.mediaRecorder.ondataavailable = (e) => {
+                    state.audioChunks.push(e.data);
+                };
+
+                state.mediaRecorder.onstop = () => {
+                    const blob = new Blob(state.audioChunks, { type: 'audio/webm' });
+                    const text = prompt('📝 Enter description for this voice note:') || 'Voice note';
+
+                    state.voiceNotes.push({
+                        id: generateUUID(),
+                        project_id: state.projectId,
+                        captured_at: new Date().toISOString(),
+                        transcription: text,
+                        confidence: 1.0,
+                        duration_seconds: 30
+                    });
+
+                    log(`✅ Voice note ${state.voiceNotes.length}: ${text}`);
+                    updateUI();
+
+                    stream.getTracks().forEach(t => t.stop());
+                };
+
+                state.mediaRecorder.start();
+                state.isRecording = true;
+                log('🎤 Recording...');
+
+            } catch (err) {
+                alert('❌ Microphone access denied!');
+                log('❌ Mic error: ' + err.message);
+                btn.textContent = '🎤 RECORD VOICE NOTE';
+                btn.classList.remove('recording');
+            }
+        }
+
+        function stopRecording() {
+            const btn = document.getElementById('voiceBtn');
+            btn.textContent = '🎤 RECORD VOICE NOTE';
+            btn.classList.remove('recording');
+
+            if (state.mediaRecorder) {
+                state.mediaRecorder.stop();
+                state.isRecording = false;
+                log('⏹️ Recording stopped');
+            }
+        }
+
+        // ===== PHOTO CAPTURE =====
+        function handlePhoto(event, type) {
+            if (!state.projectId) {
+                alert('❌ Create a project first!');
+                return;
+            }
+
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                state.photos.push({
+                    id: generateUUID(),
+                    project_id: state.projectId,
+                    photo_type: type,
+                    captured_at: new Date().toISOString(),
+                    file_data: e.target.result,
+                    ocr_confidence: 0.90
+                });
+
+                // Show thumbnail
+                const grid = document.getElementById('thumbnailGrid');
+                const div = document.createElement('div');
+                div.className = 'thumbnail';
+                div.innerHTML = `<img src="${e.target.result}">`;
+                grid.appendChild(div);
+
+                log(`✅ Photo ${state.photos.length}: ${type}`);
+                updateUI();
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // ===== SAVE =====
+        function saveData() {
+            if (!state.projectId) {
+                alert('❌ Create a project first!');
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            btn.textContent = '⏳ SAVING...';
+            btn.disabled = true;
+
+            try {
+                const jobData = {
+                    jobId: state.projectId,
+                    projectReference: state.projectRef,
+                    address: state.address,
+                    createdAt: new Date().toISOString(),
+                    status: 'in-progress',
+                    voiceNotes: state.voiceNotes,
+                    photos: state.photos,
+                    managerInputs: {}
+                };
+
+                let allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                const idx = allJobs.findIndex(j => j.jobId === state.projectId);
+
+                if (idx >= 0) {
+                    allJobs[idx] = jobData;
+                } else {
+                    allJobs.push(jobData);
+                }
+
+                localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+
+                log(`✅ SAVED! Total jobs: ${allJobs.length}`);
+                log(`   Voice: ${state.voiceNotes.length}, Photos: ${state.photos.length}`);
+
+                btn.textContent = '✅ SAVED!';
+                setTimeout(() => {
+                    btn.textContent = '💾 SAVE TO DASHBOARD';
+                    btn.disabled = false;
+                }, 2000);
+
+                loadProjects();
+
+            } catch (err) {
+                log('❌ SAVE FAILED: ' + err.message);
+                alert('❌ Save failed: ' + err.message);
+                btn.textContent = '💾 SAVE TO DASHBOARD';
+                btn.disabled = false;
+            }
+        }
+
+        // ===== CLEAR =====
+        function clearAll() {
+            if (!confirm('⚠️ Delete ALL data?')) return;
+
+            localStorage.clear();
+            state = {
+                projectId: null,
+                projectRef: null,
+                address: '',
+                voiceNotes: [],
+                photos: [],
+                isRecording: false,
+                mediaRecorder: null,
+                audioChunks: []
+            };
+
+            document.getElementById('addressInput').value = '';
+            document.getElementById('thumbnailGrid').innerHTML = '';
+            document.getElementById('console').innerHTML = '';
+
+            loadProjects();
+            updateUI();
+            log('🗑️ All data cleared');
+        }
+
+        // ===== UI UPDATE =====
+        function updateUI() {
+            // Counts
+            document.getElementById('voiceCount').textContent = state.voiceNotes.length;
+            document.getElementById('photoCount').textContent = state.photos.length;
+            document.getElementById('totalCount').textContent = state.voiceNotes.length + state.photos.length;
+
+            // Project status
+            const statusBox = document.getElementById('projectStatus');
+            const warning = document.getElementById('noProjectWarning');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (state.projectId) {
+                statusBox.classList.remove('hidden');
+                warning.style.display = 'none';
+                document.getElementById('projectRef').textContent = state.projectRef;
+                document.getElementById('projectAddress').textContent = state.address;
+
+                const total = state.voiceNotes.length + state.photos.length;
+                if (total > 0) {
+                    saveBtn.textContent = `💾 SAVE TO DASHBOARD (${total} items)`;
+                    saveBtn.disabled = false;
+                } else {
+                    saveBtn.textContent = '💾 SAVE TO DASHBOARD';
+                    saveBtn.disabled = true;
+                }
+            } else {
+                statusBox.classList.add('hidden');
+                warning.style.display = 'block';
+                saveBtn.textContent = '⚠️ CREATE PROJECT FIRST';
+                saveBtn.disabled = true;
+            }
+        }
+
+        // ===== UTILS =====
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
+    </script>
+</body>
+</html>

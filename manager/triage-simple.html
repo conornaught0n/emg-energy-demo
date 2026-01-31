@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMG Manager Dashboard - WORKING</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #2C5F2D;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header img {
+            height: 35px;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-white {
+            background: white;
+            color: #2C5F2D;
+        }
+
+        .btn-primary {
+            background: #2C5F2D;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #D32F2F;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2C5F2D;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .job-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .job-ref {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2C5F2D;
+            margin-bottom: 10px;
+        }
+
+        .job-address {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .job-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .job-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 20px;
+        }
+
+        .modal-header {
+            background: #2C5F2D;
+            color: white;
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2C5F2D;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2C5F2D;
+        }
+
+        .voice-note {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .photo-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 3px solid #2C5F2D;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h2 {
+            color: #2C5F2D;
+            margin-bottom: 15px;
+        }
+
+        #console {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <img src="https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png" alt="EMG Energy">
+            <div style="font-size: 14px; opacity: 0.9;">Manager Dashboard - WORKING VERSION</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 8px; font-weight: bold;">
+                <span id="totalJobs">0</span> Jobs
+            </div>
+            <a href="../field/index-simple.html" class="btn btn-white">🎤 Field Capture</a>
+            <a href="../index.html" class="btn btn-white">🏠 Home</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="statTotal">0</div>
+                <div class="stat-label">Total Jobs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statVoice">0</div>
+                <div class="stat-label">Voice Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statPhotos">0</div>
+                <div class="stat-label">Photos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="statCompleted">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+        </div>
+
+        <!-- Jobs Grid -->
+        <div id="jobsGrid" class="jobs-grid"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <h2>📋 No Jobs Yet</h2>
+            <p style="margin-bottom: 20px;">Jobs are created when you capture data in the Field Operator interface.</p>
+            <a href="../field/index-simple.html" class="btn btn-primary">🎤 Go to Field Capture</a>
+        </div>
+
+        <!-- Debug Console -->
+        <div class="stat-card">
+            <h3 style="margin-bottom: 10px;">🔧 Debug Console</h3>
+            <div id="console"></div>
+            <button class="btn btn-danger" onclick="clearAllJobs()" style="margin-top: 10px;">
+                🗑️ DELETE ALL JOBS
+            </button>
+        </div>
+    </div>
+
+    <!-- Job Detail Modal -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Job Details</h2>
+                <button onclick="closeModal()" style="background: none; border: none; color: white; font-size: 32px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="section">
+                    <div class="section-title">📍 Project Information</div>
+                    <p><strong>Reference:</strong> <span id="detailRef"></span></p>
+                    <p><strong>Address:</strong> <span id="detailAddress"></span></p>
+                    <p><strong>Status:</strong> <span id="detailStatus"></span></p>
+                    <p><strong>Created:</strong> <span id="detailCreated"></span></p>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🎤 Voice Notes (<span id="detailVoiceCount">0</span>)</div>
+                    <div id="detailVoiceNotes"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📷 Photos (<span id="detailPhotoCount">0</span>)</div>
+                    <div id="detailPhotos" class="photo-grid"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📝 Manager Notes</div>
+                    <textarea id="managerNotes" placeholder="Add your assessment notes here..."></textarea>
+
+                    <label style="display: block; font-weight: bold; margin-top: 15px;">Floor Area (m²):</label>
+                    <input type="number" id="floorArea" placeholder="165">
+
+                    <label style="display: block; font-weight: bold; margin-top: 15px;">Year Built:</label>
+                    <input type="number" id="yearBuilt" placeholder="2020">
+
+                    <label style="display: block; font-weight: bold; margin-top: 15px;">BER Rating:</label>
+                    <select id="berRating">
+                        <option value="">Select...</option>
+                        <option value="A1">A1</option>
+                        <option value="A2">A2</option>
+                        <option value="A3">A3</option>
+                        <option value="B1">B1</option>
+                        <option value="B2">B2</option>
+                        <option value="B3">B3</option>
+                        <option value="C1">C1</option>
+                        <option value="C2">C2</option>
+                        <option value="D1">D1</option>
+                        <option value="E1">E1</option>
+                        <option value="F">F</option>
+                        <option value="G">G</option>
+                    </select>
+
+                    <button class="btn btn-primary" onclick="saveManagerNotes()" style="margin-top: 15px;">
+                        💾 Save Notes
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 30px;">
+                    <button class="btn btn-secondary" onclick="generatePDF()">
+                        🖨️ Generate PDF
+                    </button>
+                    <button class="btn btn-primary" onclick="closeModal()">
+                        ✅ Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allJobs = [];
+        let currentJobId = null;
+
+        function log(msg) {
+            console.log(msg);
+            const el = document.getElementById('console');
+            el.innerHTML += msg + '\n';
+            el.scrollTop = el.scrollHeight;
+        }
+
+        window.onload = () => {
+            log('🚀 Dashboard loading...');
+            loadJobs();
+            updateStats();
+            displayJobs();
+            log('✅ Dashboard ready');
+        };
+
+        function loadJobs() {
+            try {
+                allJobs = JSON.parse(localStorage.getItem('emg_all_jobs') || '[]');
+                log(`📋 Loaded ${allJobs.length} jobs`);
+
+                allJobs.forEach(job => {
+                    log(`  - ${job.projectReference}: ${job.voiceNotes.length} notes, ${job.photos.length} photos`);
+                });
+            } catch (err) {
+                log('❌ Error loading jobs: ' + err.message);
+                allJobs = [];
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalJobs').textContent = allJobs.length;
+            document.getElementById('statTotal').textContent = allJobs.length;
+
+            const totalVoice = allJobs.reduce((sum, j) => sum + (j.voiceNotes?.length || 0), 0);
+            const totalPhotos = allJobs.reduce((sum, j) => sum + (j.photos?.length || 0), 0);
+            const completed = allJobs.filter(j => j.status === 'completed').length;
+
+            document.getElementById('statVoice').textContent = totalVoice;
+            document.getElementById('statPhotos').textContent = totalPhotos;
+            document.getElementById('statCompleted').textContent = completed;
+        }
+
+        function displayJobs() {
+            const grid = document.getElementById('jobsGrid');
+            const empty = document.getElementById('emptyState');
+
+            if (allJobs.length === 0) {
+                grid.style.display = 'none';
+                empty.style.display = 'block';
+                return;
+            }
+
+            grid.style.display = 'grid';
+            empty.style.display = 'none';
+
+            grid.innerHTML = allJobs.map(job => `
+                <div class="job-card">
+                    <div class="job-ref">${job.projectReference}</div>
+                    <div class="job-address">${job.address}</div>
+
+                    <select onchange="updateJobStatus('${job.jobId}', this.value)">
+                        <option value="pending" ${job.status === 'pending' ? 'selected' : ''}>📋 Pending</option>
+                        <option value="in-progress" ${job.status === 'in-progress' ? 'selected' : ''}>🔄 In Progress</option>
+                        <option value="review" ${job.status === 'review' ? 'selected' : ''}>⚠️ Review</option>
+                        <option value="completed" ${job.status === 'completed' ? 'selected' : ''}>✅ Completed</option>
+                    </select>
+
+                    <div class="job-meta">
+                        <span>🎤 ${job.voiceNotes?.length || 0} notes</span>
+                        <span>📷 ${job.photos?.length || 0} photos</span>
+                        <span>📅 ${new Date(job.createdAt).toLocaleDateString()}</span>
+                    </div>
+
+                    <div class="job-actions">
+                        <button class="btn btn-primary" onclick="viewJob('${job.jobId}')">
+                            📊 View Details
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteJob('${job.jobId}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateJobStatus(jobId, newStatus) {
+            const job = allJobs.find(j => j.jobId === jobId);
+            if (job) {
+                job.status = newStatus;
+                localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+                log(`✅ Updated ${job.projectReference} to ${newStatus}`);
+                updateStats();
+                displayJobs();
+            }
+        }
+
+        function deleteJob(jobId) {
+            if (!confirm('⚠️ Delete this job? This cannot be undone!')) return;
+
+            allJobs = allJobs.filter(j => j.jobId !== jobId);
+            localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+            log(`🗑️ Deleted job ${jobId}`);
+            loadJobs();
+            updateStats();
+            displayJobs();
+        }
+
+        function clearAllJobs() {
+            if (!confirm('⚠️⚠️⚠️ DELETE ALL JOBS? This cannot be undone!')) return;
+
+            localStorage.removeItem('emg_all_jobs');
+            allJobs = [];
+            log('🗑️ ALL JOBS DELETED');
+            loadJobs();
+            updateStats();
+            displayJobs();
+        }
+
+        function viewJob(jobId) {
+            const job = allJobs.find(j => j.jobId === jobId);
+            if (!job) return;
+
+            currentJobId = jobId;
+
+            document.getElementById('modalTitle').textContent = job.projectReference;
+            document.getElementById('detailRef').textContent = job.projectReference;
+            document.getElementById('detailAddress').textContent = job.address;
+            document.getElementById('detailStatus').textContent = job.status;
+            document.getElementById('detailCreated').textContent = new Date(job.createdAt).toLocaleString();
+
+            // Voice notes
+            const voiceDiv = document.getElementById('detailVoiceNotes');
+            document.getElementById('detailVoiceCount').textContent = job.voiceNotes?.length || 0;
+
+            if (job.voiceNotes && job.voiceNotes.length > 0) {
+                voiceDiv.innerHTML = job.voiceNotes.map((note, i) => `
+                    <div class="voice-note">
+                        <strong>Note ${i + 1}</strong> - ${new Date(note.captured_at).toLocaleTimeString()}<br>
+                        ${note.transcription}
+                    </div>
+                `).join('');
+            } else {
+                voiceDiv.innerHTML = '<p style="color: #999;">No voice notes</p>';
+            }
+
+            // Photos
+            const photoDiv = document.getElementById('detailPhotos');
+            document.getElementById('detailPhotoCount').textContent = job.photos?.length || 0;
+
+            if (job.photos && job.photos.length > 0) {
+                photoDiv.innerHTML = job.photos.map(photo => `
+                    <div class="photo-item">
+                        <img src="${photo.file_data}" alt="${photo.photo_type}">
+                    </div>
+                `).join('');
+            } else {
+                photoDiv.innerHTML = '<p style="color: #999;">No photos</p>';
+            }
+
+            // Manager inputs
+            const inputs = job.managerInputs || {};
+            document.getElementById('managerNotes').value = inputs.notes || '';
+            document.getElementById('floorArea').value = inputs.floorArea || '';
+            document.getElementById('yearBuilt').value = inputs.yearBuilt || '';
+            document.getElementById('berRating').value = inputs.berRating || '';
+
+            document.getElementById('jobModal').classList.add('active');
+            log(`👁️ Viewing ${job.projectReference}`);
+        }
+
+        function closeModal() {
+            document.getElementById('jobModal').classList.remove('active');
+        }
+
+        function saveManagerNotes() {
+            if (!currentJobId) return;
+
+            const job = allJobs.find(j => j.jobId === currentJobId);
+            if (!job) return;
+
+            job.managerInputs = {
+                notes: document.getElementById('managerNotes').value,
+                floorArea: document.getElementById('floorArea').value,
+                yearBuilt: document.getElementById('yearBuilt').value,
+                berRating: document.getElementById('berRating').value
+            };
+
+            localStorage.setItem('emg_all_jobs', JSON.stringify(allJobs));
+            alert('✅ Manager notes saved!');
+            log(`💾 Saved notes for ${job.projectReference}`);
+        }
+
+        function generatePDF() {
+            alert('PDF generation coming soon!');
+            log('🖨️ PDF generation requested');
+        }
+    </script>
+</body>
+</html>
