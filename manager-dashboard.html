@@ -877,6 +877,22 @@
             var job = STATE.jobs.find(function(j) { return j.jobId === jobId; });
             if (!job) return;
 
+            log('📄 Generating PDF with logo...');
+
+            // Load logo image first
+            var logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            logoImg.onload = function() {
+                generatePDFWithLogo(job, logoImg);
+            };
+            logoImg.onerror = function() {
+                log('⚠️ Logo load failed, generating without logo image');
+                generatePDFWithLogo(job, null);
+            };
+            logoImg.src = 'https://emgenergy.ie/wp-content/uploads/2024/05/EMG-Energy.png';
+        }
+
+        function generatePDFWithLogo(job, logoImage) {
             try {
                 var { jsPDF } = window.jspdf;
                 var doc = new jsPDF();
@@ -888,13 +904,31 @@
                 doc.setFillColor(44, 95, 45);
                 doc.rect(0, 0, pageWidth, 70, 'F');
 
-                // EMG Energy logo - white box with text
-                doc.setFillColor(255, 255, 255);
-                doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
-                doc.setTextColor(44, 95, 45);
-                doc.setFontSize(22);
-                doc.setFont(undefined, 'bold');
-                doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
+                // EMG Energy logo
+                if (logoImage) {
+                    try {
+                        // Add loaded logo image
+                        doc.addImage(logoImage, 'PNG', pageWidth / 2 - 35, 10, 70, 23, undefined, 'FAST');
+                        log('✅ Logo added to PDF');
+                    } catch(logoErr) {
+                        log('⚠️ Logo embedding failed: ' + logoErr.message);
+                        // Fallback to text
+                        doc.setFillColor(255, 255, 255);
+                        doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
+                        doc.setTextColor(44, 95, 45);
+                        doc.setFontSize(22);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
+                    }
+                } else {
+                    // No logo loaded - use text fallback
+                    doc.setFillColor(255, 255, 255);
+                    doc.roundedRect(pageWidth / 2 - 40, 10, 80, 20, 3, 3, 'F');
+                    doc.setTextColor(44, 95, 45);
+                    doc.setFontSize(22);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('EMG ENERGY', pageWidth / 2, 22, { align: 'center' });
+                }
 
                 // Title on cover
                 doc.setTextColor(255, 255, 255);
@@ -1567,9 +1601,11 @@
             if (!job.managerInputs) job.managerInputs = {};
             job.managerInputs.notes = document.getElementById('edit-manager-notes').value.trim();
 
-            save();
-            log('✅ Manager notes saved');
-            alert('✅ Manager Notes Saved!');
+            // Save directly to localStorage
+            localStorage.setItem('emg_projects', JSON.stringify(STATE.jobs));
+
+            log('✅ Manager notes saved: ' + job.managerInputs.notes.substring(0, 30));
+            alert('✅ Manager Notes Saved!\n\n' + (job.managerInputs.notes.length > 0 ? 'Saved: "' + job.managerInputs.notes.substring(0, 50) + (job.managerInputs.notes.length > 50 ? '..."' : '"') : 'Notes cleared'));
         }
 
         function generateAIRecommendations(silent) {
