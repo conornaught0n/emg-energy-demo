@@ -46,6 +46,12 @@
         .missing-items { background: #fff3cd; border: 2px solid #FF9800; padding: 15px; border-radius: 8px; margin: 15px 0; }
         .missing-items h3 { color: #856404; margin-bottom: 10px; font-size: 14px; }
         .missing-items ul { margin: 0 0 0 20px; color: #856404; font-size: 13px; }
+
+        /* Photo Styles */
+        .photo-preview { position: relative; border-radius: 8px; overflow: hidden; border: 2px solid #ddd; }
+        .photo-preview img { width: 100%; height: 100px; object-fit: cover; }
+        .photo-delete { position: absolute; top: 5px; right: 5px; background: #f44336; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; }
+        .btn-secondary { background: #2196F3; color: white; }
     </style>
 </head>
 <body>
@@ -79,15 +85,25 @@
     </div>
 
     <div class="card">
-        <h2>2️⃣ Voice Notes</h2>
+        <h2>2️⃣ Survey Data Capture</h2>
+
+        <h3 style="margin-top: 20px; color: #2C5F2D;">📷 Photos & Images</h3>
+        <p style="font-size: 14px; color: #666; margin-bottom: 10px;">Capture equipment screens, clipboard data, or site photos</p>
+
+        <input type="file" id="photoInput" accept="image/*" capture="environment" style="display: none;" onchange="handlePhoto(event)">
+        <button class="btn-secondary" onclick="document.getElementById('photoInput').click()">📸 Take Photo</button>
+
+        <div id="photosPreview" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;"></div>
+
+        <h3 style="margin-top: 20px; color: #2C5F2D;">🎤 Voice Notes</h3>
         <div id="transcribeBox" class="transcribe-box">
             <div style="color: #D32F2F; font-weight: bold;">🔴 RECORDING...</div>
             <div id="transcribeText" style="font-size: 18px; margin-top: 10px;">Listening...</div>
         </div>
         <button class="btn-blue" id="recBtn" onclick="toggleRec()">🎤 RECORD (Auto-Transcribe)</button>
         <div class="counts">
-            <div class="count"><div class="count-num" id="noteCount">0</div><div style="font-size: 12px;">Notes</div></div>
-            <div class="count"><div class="count-num" id="projCount">0</div><div style="font-size: 12px;">Projects</div></div>
+            <div class="count"><div class="count-num" id="noteCount">0</div><div style="font-size: 12px;">Voice Notes</div></div>
+            <div class="count"><div class="count-num" id="photoCount">0</div><div style="font-size: 12px;">Photos</div></div>
         </div>
         <div id="notesList"></div>
     </div>
@@ -105,6 +121,7 @@
             addr: '',
             jobTypeId: null,
             notes: [],
+            photos: [],
             recording: false,
             recognition: null,
             transcript: '',
@@ -142,6 +159,7 @@
             STATE.jobTypeId = jobTypeId;
             STATE.jobType = getJobType(jobTypeId);
             STATE.notes = [];
+            STATE.photos = [];
             STATE.checkedItems = {};
 
             log('✅ Created: ' + STATE.projRef + ' (' + STATE.jobType.name + ')');
@@ -276,7 +294,7 @@
                     createdAt: new Date().toISOString(),
                     status: 'in-progress',
                     voiceNotes: STATE.notes,
-                    photos: [],
+                    photos: STATE.photos,
                     managerInputs: {},
                     checkedItems: STATE.checkedItems
                 };
@@ -346,6 +364,7 @@
 
         function updateUI() {
             document.getElementById('noteCount').textContent = STATE.notes.length;
+            document.getElementById('photoCount').textContent = STATE.photos.length;
 
             var status = document.getElementById('statusBox');
             var warn = document.getElementById('warnBox');
@@ -373,6 +392,68 @@
                     list.innerHTML += '<div class="note"><div class="note-num">Note ' + (i+1) + '</div><div class="note-text">' + STATE.notes[i].text + '</div></div>';
                 }
             }
+        }
+
+        function handlePhoto(event) {
+            if (!STATE.projId) {
+                alert('❌ Create project first!');
+                event.target.value = '';
+                return;
+            }
+
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var photoData = e.target.result;
+
+                // Limit photo size to prevent localStorage quota issues
+                if (photoData.length > 500000) { // ~500KB limit per photo
+                    alert('⚠️ Photo too large! Please use a smaller image or reduce quality.');
+                    return;
+                }
+
+                var photo = {
+                    id: 'photo-' + Date.now(),
+                    data: photoData,
+                    timestamp: new Date().toISOString(),
+                    type: 'equipment' // or 'clipboard'
+                };
+
+                STATE.photos.push(photo);
+                log('📷 Photo added (' + STATE.photos.length + ' total)');
+                displayPhotos();
+                updateUI();
+            };
+
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function displayPhotos() {
+            var container = document.getElementById('photosPreview');
+            if (STATE.photos.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            var html = '';
+            for (var i = 0; i < STATE.photos.length; i++) {
+                html += '<div class="photo-preview">' +
+                    '<img src="' + STATE.photos[i].data + '" alt="Photo ' + (i+1) + '">' +
+                    '<button class="photo-delete" onclick="deletePhoto(' + i + ')">&times;</button>' +
+                    '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        function deletePhoto(index) {
+            if (!confirm('Delete this photo?')) return;
+            STATE.photos.splice(index, 1);
+            log('🗑️ Photo deleted');
+            displayPhotos();
+            updateUI();
         }
 
         function displayChecklist() {
