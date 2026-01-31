@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMG Test - ULTRA SIMPLE</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .box { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        button { padding: 15px 30px; font-size: 16px; margin: 5px; cursor: pointer; }
+        #status { background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 10px 0; display: none; }
+        #console { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        input { padding: 10px; font-size: 16px; width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 EMG ULTRA SIMPLE TEST</h1>
+
+    <div class="box">
+        <h2>Step 1: Create Project</h2>
+        <input type="text" id="addr" placeholder="Enter address" value="123 Test Street">
+        <button onclick="test_createProject()" style="background: green; color: white; font-weight: bold;">
+            ✅ CREATE PROJECT (CLICK ME)
+        </button>
+        <div id="status"></div>
+    </div>
+
+    <div class="box">
+        <h2>Step 2: Add Voice Note</h2>
+        <input type="text" id="voiceText" placeholder="Enter note text" value="Test voice note">
+        <button onclick="test_addVoice()" style="background: blue; color: white; font-weight: bold;">
+            🎤 ADD VOICE NOTE
+        </button>
+    </div>
+
+    <div class="box">
+        <h2>Step 3: Save</h2>
+        <button onclick="test_save()" style="background: orange; color: white; font-weight: bold;">
+            💾 SAVE TO LOCALSTORAGE
+        </button>
+    </div>
+
+    <div class="box">
+        <h2>Step 4: View Dashboard</h2>
+        <button onclick="test_viewDash()" style="background: purple; color: white; font-weight: bold;">
+            📊 VIEW IN DASHBOARD
+        </button>
+    </div>
+
+    <div class="box">
+        <h2>📟 Console Output</h2>
+        <div id="console"></div>
+    </div>
+
+    <div class="box">
+        <h2>🗑️ Reset</h2>
+        <button onclick="test_clear()" style="background: red; color: white; font-weight: bold;">
+            CLEAR ALL DATA
+        </button>
+    </div>
+
+    <script>
+        // ULTRA SIMPLE STATE
+        let PROJECT = null;
+
+        function log(msg) {
+            const d = new Date();
+            const time = d.toLocaleTimeString();
+            const text = `[${time}] ${msg}`;
+            console.log(text);
+            document.getElementById('console').innerHTML += text + '\n';
+            document.getElementById('console').scrollTop = 999999;
+        }
+
+        log('🚀 Page loaded');
+
+        function test_createProject() {
+            log('▶️ test_createProject() called');
+
+            const addr = document.getElementById('addr').value.trim();
+            log('Address: ' + addr);
+
+            if (!addr) {
+                alert('❌ Enter an address!');
+                log('❌ No address entered');
+                return;
+            }
+
+            // Create project
+            PROJECT = {
+                id: 'proj-' + Date.now(),
+                ref: 'EMG-2026-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                address: addr,
+                voiceNotes: [],
+                photos: [],
+                created: new Date().toISOString()
+            };
+
+            log('✅ Created project: ' + PROJECT.ref);
+            log('   ID: ' + PROJECT.id);
+
+            // Show status
+            const status = document.getElementById('status');
+            status.innerHTML = `
+                <strong>✅ PROJECT CREATED</strong><br>
+                Reference: ${PROJECT.ref}<br>
+                Address: ${PROJECT.address}
+            `;
+            status.style.display = 'block';
+
+            log('✅ Project created successfully!');
+        }
+
+        function test_addVoice() {
+            log('▶️ test_addVoice() called');
+
+            if (!PROJECT) {
+                alert('❌ Create a project first!');
+                log('❌ No project exists');
+                return;
+            }
+
+            const text = document.getElementById('voiceText').value.trim();
+            if (!text) {
+                alert('❌ Enter voice note text!');
+                return;
+            }
+
+            PROJECT.voiceNotes.push({
+                id: 'voice-' + Date.now(),
+                text: text,
+                time: new Date().toISOString()
+            });
+
+            log('✅ Added voice note: ' + text);
+            log('   Total notes: ' + PROJECT.voiceNotes.length);
+            alert('✅ Voice note added! Total: ' + PROJECT.voiceNotes.length);
+        }
+
+        function test_save() {
+            log('▶️ test_save() called');
+
+            if (!PROJECT) {
+                alert('❌ Create a project first!');
+                log('❌ No project exists');
+                return;
+            }
+
+            try {
+                // Get existing jobs
+                let jobs = [];
+                const stored = localStorage.getItem('emg_all_jobs');
+                log('Existing storage: ' + (stored ? stored.length + ' chars' : 'null'));
+
+                if (stored) {
+                    jobs = JSON.parse(stored);
+                    log('Parsed ' + jobs.length + ' existing jobs');
+                }
+
+                // Add our project
+                const jobData = {
+                    jobId: PROJECT.id,
+                    projectReference: PROJECT.ref,
+                    address: PROJECT.address,
+                    createdAt: PROJECT.created,
+                    status: 'in-progress',
+                    voiceNotes: PROJECT.voiceNotes.map(v => ({
+                        id: v.id,
+                        transcription: v.text,
+                        captured_at: v.time
+                    })),
+                    photos: [],
+                    managerInputs: {}
+                };
+
+                // Check if exists
+                const idx = jobs.findIndex(j => j.jobId === PROJECT.id);
+                if (idx >= 0) {
+                    jobs[idx] = jobData;
+                    log('Updated existing job at index ' + idx);
+                } else {
+                    jobs.push(jobData);
+                    log('Added new job');
+                }
+
+                // Save
+                const jsonStr = JSON.stringify(jobs);
+                localStorage.setItem('emg_all_jobs', jsonStr);
+
+                log('✅ SAVED TO LOCALSTORAGE!');
+                log('   Total jobs: ' + jobs.length);
+                log('   Data size: ' + jsonStr.length + ' chars');
+
+                alert('✅ SAVED! Total jobs: ' + jobs.length);
+
+            } catch (err) {
+                log('❌ SAVE FAILED: ' + err.message);
+                log('   Stack: ' + err.stack);
+                alert('❌ Save failed: ' + err.message);
+            }
+        }
+
+        function test_viewDash() {
+            log('▶️ Opening dashboard...');
+            window.open('manager/triage-simple.html', '_blank');
+        }
+
+        function test_clear() {
+            if (!confirm('⚠️ Clear ALL data?')) return;
+
+            localStorage.clear();
+            PROJECT = null;
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('console').innerHTML = '';
+
+            log('🗑️ All data cleared');
+            alert('🗑️ All data cleared');
+        }
+
+        // Check storage on load
+        const stored = localStorage.getItem('emg_all_jobs');
+        if (stored) {
+            const jobs = JSON.parse(stored);
+            log('📦 Found ' + jobs.length + ' existing jobs in storage');
+        } else {
+            log('📦 No existing jobs in storage');
+        }
+    </script>
+</body>
+</html>
