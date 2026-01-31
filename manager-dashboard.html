@@ -1564,10 +1564,11 @@
             log('🤖 Generating AI recommendations...');
 
             var recommendations = [];
+            var aiAnalysis = null;
 
             // Analyze survey completion
             if (job.jobTypeId && job.checkedItems) {
-                var aiAnalysis = AI_PROCESSOR.analyzeProject(job);
+                aiAnalysis = AI_PROCESSOR.analyzeProject(job);
 
                 recommendations.push('SURVEY COMPLETION ANALYSIS');
                 recommendations.push('═══════════════════════════════');
@@ -1698,7 +1699,7 @@
             job.managerInputs.recommendations = fullRecommendations;
 
             log('✅ AI recommendations generated');
-            alert('✅ AI Recommendations Generated!\n\nBased on:\n• Survey completion: ' + (job.jobTypeId ? aiAnalysis.completionPercentage + '%' : 'N/A') + '\n• Voice notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n• Photos with OCR: ' + (job.photos ? job.photos.length : 0) + '\n\nReview and edit the recommendations as needed.');
+            alert('✅ AI Recommendations Generated!\n\nBased on:\n• Survey completion: ' + (aiAnalysis ? aiAnalysis.completionPercentage + '%' : 'N/A') + '\n• Voice notes: ' + (job.voiceNotes ? job.voiceNotes.length : 0) + '\n• Photos with OCR: ' + (job.photos ? job.photos.length : 0) + '\n\nReview and edit the recommendations as needed.');
         }
 
         function approveAndFinalizeReport() {
